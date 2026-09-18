@@ -1,0 +1,24 @@
+# build artifacts
+/server
+/runeinsights
+*.exe
+
+# local data (keep the editable rates template; never publish the database: it contains usernames)
+/data/*.db
+/data/*.db-wal
+/data/*.db-shm
+*.db
+*.db-wal
+*.db-shm
+/data/*.csv.bak
+
+# frontend
+/web/node_modules/
+/web/dist/
+/web/.vite/
+
+# editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/

@@ -1,0 +1,48 @@
+# RS Companion - training rates
+# Edit this file to tell the dashboard how fast you train each skill; it powers
+# the time estimates for "next level" and the next milestone (99/110/120/200m).
+#
+# Format:  skill,exp_per_hour,training_method
+#   - skill: exact skill name (case-insensitive), e.g. Hunter, Hitpoints, Necromancy
+#   - exp_per_hour: average XP per hour as a number; commas are stripped, e.g. 350000 or 1,200,000
+#   - training_method: shown in the UI; quote it if it contains a comma
+# Entries not listed (or with exp_per_hour 0) simply show "no estimate".
+# Changes are picked up automatically - no restart needed.
+#
+# Example:
+#   Hunter,350000,Afk Croesus Front
+#   Smithing,9500000,"Anachronia base camp, hallendarman fur"
+#
+skill,exp_per_hour,training_method
+Attack,250000,Vyres(Split exp 2 way)
+Defence,0,
+Strength,250000,Vyres(Split exp 2 way)
+Hitpoints,465000,POH Elite Profane Scarabites
+Hitpoints,160000,Melee Vyres
+Ranged,0,
+Prayer,380000,Melee Vyres
+Magic,1400000,POH Elite Profane Scarabites
+Cooking,0,
+Woodcutting,0,
+Fletching,0,
+Fishing,0,
+Firemaking,270000,Melee Vyres
+Crafting,600000,Cutting Dragonstgones
+Smithing,0,
+Mining,0,
+Herblore,0,
+Agility,0,
+Thieving,1200000,Pickpocking Vyres
+Slayer,0,
+Farming,110000,Melee Vyres
+Runecraft,900000,Runic Attuner RC
+Hunter,350000,Afk Croesus Front
+Hunter,1200000,Chinchompas (justicar armour)
+Hunter,95000,"Bird trapping, afk pitfalls"
+Construction,0,
+Summoning,0,
+Dungeoneering,0,
+Divination,0,
+Invention,0,"Disassembly + siphoning augmented gear"
+Archaeology,0,
+Necromancy,850000,Nightmares
