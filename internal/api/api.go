@@ -46,6 +46,7 @@ func (a *API) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /api/players/{id}/rates", a.playerRates)
 	mux.HandleFunc("GET /api/players/{id}/history", a.playerHistory)
 	mux.HandleFunc("GET /api/players/{id}/activities", a.playerActivities)
+	mux.HandleFunc("PUT /api/players/{id}/focus", a.putFocus)
 	mux.HandleFunc("GET /api/players/{id}/daily-gains", a.playerDailyGains)
 	mux.HandleFunc("GET /api/leaderboard", a.leaderboard)
 	mux.HandleFunc("GET /api/clans/{name}", a.clan)
@@ -320,7 +321,8 @@ type SkillsResponse struct {
 	MilestoneCounts MilestoneCounts `json:"milestoneCounts"`
 	// TotalLevel is the hiscore overall level; MaxTotalLevel is the sum of
 	// every skill's in-game maximum level (varies per skill: 99/110/120).
-	MaxTotalLevel int `json:"maxTotalLevel"`
+	MaxTotalLevel int      `json:"maxTotalLevel"`
+	Focus         []string `json:"focus"`
 }
 
 // capXP returns the XP threshold at which a skill reaches its displayed cap.
@@ -497,6 +499,9 @@ func (a *API) playerSkills(w http.ResponseWriter, r *http.Request) {
 		CollectingSince: since,
 		RatesAvailable:  a.rates.Loaded(),
 	}
+	if focus, ferr := a.db.FocusList(p.ID); ferr == nil {
+		resp.Focus = focus
+	}
 	if snap == nil {
 		writeJSON(w, http.StatusOK, resp)
 		return
@@ -520,6 +525,9 @@ func (a *API) playerSkills(w http.ResponseWriter, r *http.Request) {
 		resp.Overall = &v
 	}
 	resp.CombatLevel = combatLevel(snap)
+	if focus, ferr := a.db.FocusList(p.ID); ferr == nil {
+		resp.Focus = focus
+	}
 	maxTotal := 0
 	for key := range snap.Skills {
 		if key == "overall" {
@@ -739,6 +747,40 @@ func (a *API) playerDailyGains(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"player": p, "consistency": data})
+}
+
+// putFocus replaces the player's ordered list of focused skills.
+func (a *API) putFocus(w http.ResponseWriter, r *http.Request) {
+	p, ok := a.playerFromPath(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		Skills []string `json:"skills"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	keys := make([]string, 0, len(body.Skills))
+	seen := map[string]bool{}
+	for _, raw := range body.Skills {
+		k := strings.ToLower(strings.TrimSpace(raw))
+		if _, known := skillOrderIndex[k]; k == "" || !known {
+			continue // ignore unknown skills
+		}
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		keys = append(keys, k)
+	}
+	if err := a.db.SetFocus(p.ID, keys); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	focus, _ := a.db.FocusList(p.ID)
+	writeJSON(w, http.StatusOK, map[string]any{"player": p, "focus": focus})
 }
 
 // getSkillRate returns the grouped, human-editable training-rate data.

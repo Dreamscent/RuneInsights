@@ -83,6 +83,12 @@ CREATE TABLE IF NOT EXISTS skill_snapshots (
 	rank        INTEGER NOT NULL,
 	PRIMARY KEY (snapshot_id, skill_key)
 );
+CREATE TABLE IF NOT EXISTS focus_skills (
+	player_id  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+	skill_key  TEXT NOT NULL,
+	position   INTEGER NOT NULL,
+	PRIMARY KEY (player_id, skill_key)
+);
 CREATE TABLE IF NOT EXISTS activity_snapshots (
 	snapshot_id  INTEGER NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,
 	activity_key TEXT NOT NULL,
@@ -425,3 +431,46 @@ func (d *DB) FirstSnapshotAt(playerID int64) (*time.Time, error) {
 
 
 
+
+// FocusList returns the player's focused skill keys in pin order.
+func (d *DB) FocusList(playerID int64) ([]string, error) {
+	rows, err := d.Query(
+		`SELECT skill_key FROM focus_skills WHERE player_id=? ORDER BY position`, playerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var k string
+		if err := rows.Scan(&k); err != nil {
+			return nil, err
+		}
+		out = append(out, k)
+	}
+	return out, rows.Err()
+}
+
+// SetFocus replaces the ordered list of focused skills for a player.
+func (d *DB) SetFocus(playerID int64, keys []string) error {
+	tx, err := d.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM focus_skills WHERE player_id=?`, playerID); err != nil {
+		return err
+	}
+	stmt, err := tx.Prepare(
+		`INSERT INTO focus_skills(player_id, skill_key, position) VALUES(?,?,?)`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for i, k := range keys {
+		if _, err := stmt.Exec(playerID, k, i); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}

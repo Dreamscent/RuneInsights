@@ -56,6 +56,8 @@ export interface SkillsResponse {
   collectingSince: string | null;
   ratesAvailable: boolean;
   milestoneCounts: MilestoneCounts;
+  /** focused (pinned) skill keys in pin order */
+  focus: string[];
   /** overall level reported by the hiscores */
   overall: SkillView;
   /** sum of every skill's in-game maximum level */
@@ -254,6 +256,12 @@ export const api = {
     if (to) q.set('to', to);
     return request<HistoryResponse>(`/api/players/${id}/history?${q.toString()}`);
   },
+
+  setFocus: (id: number, skills: string[]) =>
+    request<{ focus: string[] }>(`/api/players/${id}/focus`, {
+      method: 'PUT',
+      body: JSON.stringify({ skills }),
+    }),
 
   dailyGains: (id: number) =>
     request<{ player: Player; consistency: Consistency }>(`/api/players/${id}/daily-gains`),

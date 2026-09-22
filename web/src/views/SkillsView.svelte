@@ -30,9 +30,13 @@
   const filtered = $derived.by(() => {
     const list = data?.skills ?? [];
     const q = query.trim().toLowerCase();
-    const base = q ? list.filter((s) => s.name.toLowerCase().includes(q)) : [...list];
+    const order = new Map((data?.focus ?? []).map((k, i) => [k, i]));
+    const all = list.filter((s) => !q || s.name.toLowerCase().includes(q));
+    const pinned = all.filter((s) => order.has(s.key));
+    const restList = all.filter((s) => !order.has(s.key));
     const dir = sortDir === 'asc' ? 1 : -1;
-    return base.sort((a, b) => {
+
+    const sorted_rest = restList.sort((a, b) => {
       switch (sortKey) {
         case 'name':
           return a.name.localeCompare(b.name) * dir;
@@ -56,13 +60,39 @@
           return 0;
       }
     });
+    return [...pinned, ...sorted_rest];
   });
 
   // selected skill detail (history drawer)
   let selected = $state<SkillView | null>(null);
 
+  // ---- skill pinning ("focusing on") ----
+  let pinBusy = $state(false);
+
+  const focusedSet = $derived(new Set(data?.focus ?? []));
+
+  async function togglePin(key: string) {
+    if (!data || pinBusy) return;
+    pinBusy = true;
+    try {
+      const list = [...(data.focus ?? [])];
+      const i = list.indexOf(key);
+      if (i >= 0) list.splice(i, 1);
+      else list.push(key);
+      await api.setFocus(store.selectedId!, list);
+      await store.reloadSkills();
+      if (store.skills?.focus.includes(key)) store.notify(`${store.skills.skills.find((s) => s.key === key)?.name ?? key} pinned`, 'ok');
+    } catch (err) {
+      store.notify(err instanceof Error ? err.message : 'Failed to update pins', 'err');
+    } finally {
+      pinBusy = false;
+    }
+  }
+
+  let dayRates = $state<Rates | null>(null);
+
   // gains for the selected window (1/7/30 days), per skill
-  const GAIN_WINDOWS = ['day', 'week', 'month'] as const;
+  const GAIN_WINDOWS = ['day', 'week', 'month', 'year'] as const;
   type GainWindow = (typeof GAIN_WINDOWS)[number];
   let gainWindow = $state<GainWindow>('day');
   let ratesByWindow = $state<Partial<Record<GainWindow, Rates | null>>>({});
@@ -227,13 +257,52 @@
               : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}"
             onclick={() => setGainWindow(w)}
           >
-            {w === 'day' ? '1 day' : w === 'week' ? '7 days' : '30 days'}
+            {w === 'day' ? '1 day' : w === 'week' ? '7 days' : w === 'month' ? '30 days' : '1 year'}
           </button>
         {/each}
       </div>
       <span class="text-xs text-[var(--color-faint)]">
-        Click a skill for its history and automatic next milestone
+        {#if data && data.focus.length > 0}
+          <span class="chip text-[var(--color-gold-soft)]">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--color-gold)" stroke="var(--color-gold)" stroke-width="1.2" stroke-linejoin="round">
+              <path d="M9 4h6l1 7 3 3v2h-7v6l-1 1-1-1v-5H5v-2l3-3z" />
+            </svg>
+            {data.focus.length} pinned
+          </span>
+        {/if}
+        Click a skill for its history · hover its icon and hit
+        <svg class="inline -mt-0.5 text-[var(--color-gold)]" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" style="display:inline">
+          <path d="M9 4h6l1 7 3 3v2h-7v6l-1 1-1-1v-5H5v-2l3-3z" />
+        </svg>
+        to pin it to the top as a focused skill
       </span>
+      <div class="card min-w-44 px-3 py-1.5">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="text-[10px] font-medium tracking-wide text-[var(--color-muted)] uppercase">Total level</div>
+            <div class="tabular text-lg leading-tight font-semibold text-[var(--color-ink)]">
+              {num(data?.overall.level ?? 0)}<span class="ml-1.5 text-xs font-normal text-[var(--color-faint)]">/ {num(data?.maxTotalLevel ?? 0)}</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] font-medium tracking-wide text-[var(--color-faint)] uppercase">Gain {gainWindow === 'day' ? '1d' : gainWindow === 'week' ? '1w' : gainWindow === 'month' ? '30d' : '1y'}</div>
+            {#if gainValues.get('overall') === null && (fallbackGain.map.get('overall') ?? 0) > 0}
+              <div class="tabular text-lg leading-tight font-semibold text-[var(--color-sky)]">{signedCompact(fallbackGain.map.get('overall'))}</div>
+            {:else if gainValues.get('overall') != null}
+              <div class="tabular text-lg leading-tight font-semibold text-[var(--color-jade)]">{signedCompact(gainValues.get('overall'))}</div>
+            {:else}
+              <div class="text-lg leading-tight font-semibold text-[var(--color-faint)]">—</div>
+            {/if}
+          </div>
+        </div>
+        <div class="mt-1">
+          <ProgressBar
+            pctValue={((data?.overall.level ?? 0) / (data?.maxTotalLevel || 1)) * 100}
+            color="linear-gradient(90deg,var(--color-gold),var(--color-jade))"
+            height={4}
+          />
+        </div>
+      </div>
     </div>
 
     <div class="card overflow-hidden">
@@ -251,7 +320,7 @@
                 Experience {arrowChar('xp')}
               </th>
               <th class="cursor-pointer hidden px-3 py-2.5 text-right font-medium select-none md:table-cell" onclick={() => toggleSort('rate')}>
-                Gain {gainWindow === 'day' ? '1d' : gainWindow === 'week' ? '1w' : '30d'} {arrowChar('rate')}
+                Gain {gainWindow === 'day' ? '1d' : gainWindow === 'week' ? '1w' : gainWindow === 'month' ? '30d' : '1y'} {arrowChar('rate')}
               </th>
               <th class="px-3 py-2.5 font-medium">Next level</th>
               <th class="cursor-pointer px-3 py-2.5 font-medium select-none" onclick={() => toggleSort('remaining')}>
@@ -266,12 +335,32 @@
             {#each filtered as s (s.key)}
               {@const color = skillColor(s.key)}
               <tr
-                class="cursor-pointer transition-colors hover:bg-[var(--color-panel-2)]"
+                class="cursor-pointer transition-colors hover:bg-[var(--color-panel-2)]
+                  {focusedSet.has(s.key) ? 'bg-[rgba(245,165,36,.05)] shadow-[inset_3px_0_0_rgba(245,165,36,.55)]' : ''}"
                 onclick={() => void openSkill(s)}
               >
                 <td class="px-4 py-2.5">
                   <div class="flex items-center gap-2.5">
-                    <SkillIcon skillKey={s.key} name={s.name} size={30} rounded={8} />
+                    <button
+                      class="relative shrink-0 group/pin {focusedSet.has(s.key) ? 'pl-[2px]' : ''}"
+                      title={focusedSet.has(s.key) ? 'Unpin skill' : 'Pin skill to top'}
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        void togglePin(s.key);
+                      }}
+                      disabled={pinBusy}
+                    >
+                      <SkillIcon skillKey={s.key} name={s.name} size={30} rounded={8} />
+                      <span
+                        class="absolute -right-1.5 -top-1.5 {focusedSet.has(s.key)
+                        ? 'text-[var(--color-gold)]'
+                        : 'text-[var(--color-faint)] opacity-0 group-hover:opacity-100'}"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+                          <path d="M9 4h6l1 7 3 3v2h-7v6l-1 1-1-1v-5H5v-2l3-3z" />
+                        </svg>
+                      </span>
+                    </button>
                     <div class="leading-tight">
                       <div class="font-medium text-[var(--color-ink)]">{s.name}</div>
                       {#if s.elite}
@@ -299,7 +388,7 @@
                         {signedCompact(fallbackGain.map.get(s.key)!)}
                       </span>
                     {:else}
-                      <span class="text-[var(--color-faint)]" title="Need a baseline snapshot ≥ {gainWindow === 'day' ? '1 day' : gainWindow === 'week' ? '1 week' : '30 days'} old">—</span>
+                      <span class="text-[var(--color-faint)]" title="Need a baseline snapshot ≥ {gainWindow === 'day' ? '1 day' : gainWindow === 'week' ? '1 week' : gainWindow === 'month' ? '30 days' : '1 year'} old">—</span>
                     {/if}
                   {:else}
                     <span class="text-[var(--color-jade)]">{signedCompact(gainValues.get(s.key))}</span>
@@ -315,7 +404,7 @@
                     {@const filled = Math.round((s.xpIntoLevel / Math.max(1, s.xpIntoLevel + s.xpToNext)) * 100)}
                     <ProgressBar pctValue={filled} color={color.accent} height={6} />
                     <div class="tabular mt-1 text-[11px] text-[var(--color-muted)]">
-                      {compact(s.xpToNext)} xp to level {s.level + 1}
+                      {compact(s.xpToNext)} xp to {s.virtualLevel > s.level ? 'virtual' : ''} level {s.virtualLevel + 1}
                       {#if s.nextLevelEtaHours != null}<span class="text-[var(--color-gold)]"> · ≈ {duration(s.nextLevelEtaHours)}</span>{/if}
                     </div>
                   {/if}
@@ -347,7 +436,7 @@
     </div>
 
     <p class="text-center text-[11px] text-[var(--color-faint)]">
-      Snapshot as of {timeAgo(data.snapshotAt)} · the gain column shows XP recorded in the selected {gainWindow === 'day' ? 'day' : gainWindow === 'week' ? 'week' : '30 days'}
+      Snapshot as of {timeAgo(data.snapshotAt)} · the gain column shows XP recorded in the selected {gainWindow === 'day' ? 'day' : gainWindow === 'week' ? 'week' : gainWindow === 'month' ? '30 days' : 'year'}
       {#if fallbackGain.active && !ratesByWindow[gainWindow]?.hasBaseline}
         · overall gain is the total since tracking began ({Math.max(1, Math.floor(fallbackGain.days))} {Math.floor(fallbackGain.days) <= 1 ? 'day' : 'days'} of data)
       {/if}
@@ -373,9 +462,23 @@
     width="34rem"
   >
     <div class="flex flex-col gap-5">
+      <div class="flex items-center justify-between">
+        <button
+          class="btn {focusedSet.has(selected.key) ? 'border-[var(--color-gold)] text-[var(--color-gold-soft)]' : ''}"
+          disabled={pinBusy}
+          onclick={() => void togglePin(selected.key)}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill={focusedSet.has(selected.key) ? 'var(--color-gold)' : 'none'} stroke="var(--color-gold)" stroke-width="1.5" stroke-linejoin="round">
+            <path d="M9 4h6l1 7 3 3v2h-7v6l-1 1-1-1v-5H5v-2l3-3z" />
+          </svg>
+          {focusedSet.has(selected.key) ? 'Unpin skill' : 'Pin skill to top'}
+        </button>
+        <span class="text-[11px] text-[var(--color-faint)]">pinned skills stay first in the table</span>
+      </div>
       <div class="grid grid-cols-3 gap-2 text-center">
         <div class="rounded-lg border border-[var(--color-line)] bg-[var(--color-bg-soft)] p-2.5">
           <div class="text-[10px] tracking-wider text-[var(--color-faint)] uppercase">Level</div>
+
           <div class="tabular text-lg font-semibold">
             {selected.level}
             {#if selected.virtualLevel !== selected.level}<span class="text-xs text-[var(--color-gold)]">v{selected.virtualLevel}</span>{/if}
@@ -383,25 +486,44 @@
         </div>
         <div class="rounded-lg border border-[var(--color-line)] bg-[var(--color-bg-soft)] p-2.5">
           <div class="text-[10px] tracking-wider text-[var(--color-faint)] uppercase">XP</div>
-          <div class="tabular text-lg font-semibold">{compact(selected.xp)}</div>
+          <div
+            class="tabular text-base font-semibold text-[var(--color-ink)]"
+            title="exact: {selected.xp.toLocaleString()} xp ({compact(selected.xp)})"
+          >
+            {selected.xp.toLocaleString()}
+          </div>
         </div>
         <div class="rounded-lg border border-[var(--color-line)] bg-[var(--color-bg-soft)] p-2.5">
           <div class="text-[10px] tracking-wider text-[var(--color-faint)] uppercase">Rank</div>
-          <div class="tabular text-lg font-semibold">{selected.rank ?? '—'}</div>
+          <div class="tabular text-base font-semibold">{selected.rank ? selected.rank.toLocaleString() : '—'}</div>
         </div>
       </div>
 
       {#if !selected.maxed}
         <div>
           <div class="mb-1.5 flex items-center justify-between text-xs text-[var(--color-muted)]">
-            <span>Progress to level {selected.level + 1}</span>
-            <span class="tabular">{compact(selected.xpIntoLevel)} / {compact(selected.xpIntoLevel + selected.xpToNext)}</span>
+            <span>Progress to {selected.virtualLevel > selected.level ? 'virtual' : ''} level {selected.virtualLevel + 1}</span>
+            <span class="tabular" title="exact: {selected.xpIntoLevel.toLocaleString()} of {(selected.xpIntoLevel + selected.xpToNext).toLocaleString()} xp">
+              {compact(selected.xpIntoLevel)} / {compact(selected.xpIntoLevel + selected.xpToNext)}
+            </span>
           </div>
           <ProgressBar
             pctValue={(selected.xpIntoLevel / Math.max(1, selected.xpIntoLevel + selected.xpToNext)) * 100}
             color={skillColor(selected.key).accent}
             height={10}
           />
+          <div class="tabular mt-1.5 flex items-center justify-between text-[11px] text-[var(--color-muted)]">
+            <span>
+              {num(selected.xpIntoLevel)} / {num(selected.xpIntoLevel + selected.xpToNext)} xp
+              {#if selected.ratePerDay > 0.5}
+                · gained in <span class="text-[var(--color-sky)]">{Math.max(0, selected.xpToNext - selected.xpIntoLevel) <= 0 ? 'now' : duration(((selected.xpToNext - selected.xpIntoLevel) / selected.ratePerDay))}</span> at the 30d pace
+              {/if}
+            </span>
+            <span>
+              requires
+              <span class="font-semibold text-[var(--color-ink)]">{num(selected.xpToNext)}</span> xp
+            </span>
+          </div>
         </div>
       {/if}
 

@@ -4,6 +4,7 @@
   let {
     label,
     value,
+    valueSuffix,
     sub,
     accent = 'var(--color-gold)',
     icon,
@@ -11,6 +12,8 @@
   }: {
     label: string;
     value: string;
+    /** small muted denominator after the main value (e.g. "/ 152") */
+    valueSuffix?: string;
     sub?: string;
     accent?: string;
     icon?: Snippet;
@@ -29,7 +32,7 @@
         {label}
       </div>
       <div class="tabular mt-1.5 text-2xl leading-tight font-semibold text-[var(--color-ink)]">
-        {value}
+        {value}<span class="ml-1.5 text-base font-normal text-[var(--color-faint)]">{valueSuffix ?? ''}</span>
       </div>
       {#if sub}
         <div class="mt-1 truncate text-xs text-[var(--color-muted)]">{sub}</div>

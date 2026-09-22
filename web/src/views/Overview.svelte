@@ -5,7 +5,8 @@
   import SkillIcon from '../components/SkillIcon.svelte';
   import Spinner from '../components/Spinner.svelte';
   import LineChart from '../components/LineChart.svelte';
-  import { compact, decimal, num, pct, signedCompact, dateTime } from '../lib/format';
+  import ProgressBar from '../components/ProgressBar.svelte';
+  import { compact, decimal, duration, num, pct, signedCompact, dateTime } from '../lib/format';
 
   const data = $derived(store.skills);
 
@@ -75,6 +76,16 @@
   );
   const chartPoints = $derived((overallHistory?.points ?? []).map((p) => p.xp));
 
+  // daily gains for the bar chart: skip the first point (no delta yet)
+  const dailyGainLabels = $derived(
+    (consistency?.days.filter((d) => d.gain >= 0).slice(-30) ?? []).map((d) =>
+      new Date(d.date + 'T00:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    ),
+  );
+  const dailyGainPoints = $derived(
+    consistency?.days.filter((d) => d.gain >= 0).slice(-30).map((d) => d.gain) ?? [],
+  );
+
   const milestoneStats = $derived.by(() => {
     const skills = data?.skills ?? [];
     if (skills.length === 0) return { pctAvg: 0, complete: 0, count: 0, closest: [] };
@@ -122,9 +133,8 @@
       <StatCard
         label="Combat level"
         value={String(data.combatLevel)}
-        sub="max 152"
+        valueSuffix="/ 152"
         accent="#fb7185"
-        footnote="Computed from combat stats (RS3 formula)"
       >
         {#snippet icon()}
           <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(251,113,133,.15)] text-xl">⚔️</div>
@@ -134,7 +144,7 @@
       <StatCard
         label="Overall level"
         value={num(data.overall.level)}
-        sub={`${maxedCount} skill${maxedCount === 1 ? '' : 's'} maxed`}
+        valueSuffix={`/ ${num(data.maxTotalLevel)}`}
         accent="#38bdf8"
       >
         {#snippet icon()}
@@ -182,26 +192,107 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-5 lg:grid-cols-5">
+        <!-- focusing on -->
+        <div class="card mb-5 p-4">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-[var(--color-ink)]">Focusing on</h2>
+            <button
+              class="text-[11px] text-[var(--color-gold)] hover:underline"
+              onclick={() => (store.view = 'skills')}
+            >
+              {data.focus.length} pinned · manage
+            </button>
+          </div>
+          {#if data.focus.length === 0}
+            <p class="py-4 text-center text-xs text-[var(--color-muted)]">
+              Pin skills on the Skills page to follow them here.
+            </p>
+          {:else}
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {#each data.focus.slice(0, 4) as fk (fk)}
+                {@const sk = (data.skills || []).find((x) => x.key === fk)}
+                {@const dayRow = rates.day?.skills.find((x) => x.key === fk)}
+                {@const momentum = dayRow?.hasBaseline && dayRow.gain > 0}
+                {#if sk}
+                  <div class="rounded-lg border border-[var(--color-line)] bg-[var(--color-bg-soft)] p-3">
+                    <div class="flex items-center gap-2">
+                      <SkillIcon skillKey={sk.key} name={sk.name} size={26} rounded={7} />
+                      <div class="min-w-0 leading-tight">
+                        <div class="truncate text-xs font-semibold text-[var(--color-ink)]">{sk.name}</div>
+                        <div class="text-[10px] text-[var(--color-muted)]">
+                          lvl {sk.level}{sk.virtualLevel !== sk.level ? ' (v' + sk.virtualLevel + ')' : ''}
+                          · {compact(sk.xp)} xp
+                        </div>
+                      </div>
+                      <span
+                        class="ml-auto h-2 w-2 shrink-0 rounded-full"
+                        style="background:{momentum ? 'var(--color-jade)' : 'var(--color-line-2)'}"
+                        title={momentum ? '+' + num(dayRow.gain) + ' xp gained in the last day' : 'no XP in the last day'}
+                      ></span>
+                    </div>
+                    <div class="mt-2">
+                      <ProgressBar
+                        pctValue={sk.next.pct}
+                        color="linear-gradient(90deg,#34d399,var(--color-gold))"
+                        height={5}
+                      />
+                      <div class="tabular mt-1 flex items-center justify-between text-[10px] text-[var(--color-muted)]">
+                        <span>{decimal(sk.next.pct, 0)}% → {sk.next.label}</span>
+                        <span class="font-medium {sk.next.etaHours ? 'text-[var(--color-gold-soft)]' : 'text-[var(--color-faint)]'}">
+                          {sk.next.etaHours ? '≈ ' + duration(sk.next.etaHours) : 'no estimate'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                {/if}
+              {/each}
+            </div>
+            {#if data.focus.length > 4}
+              <p class="mt-2 text-center text-[11px] text-[var(--color-faint)]">
+                +{data.focus.length - 4} more pinned — see the Skills page
+              </p>
+            {/if}
+          {/if}
+        </div>
+
+
+        <div class="grid grid-cols-1 gap-5 lg:grid-cols-5">
       <!-- overall chart -->
       <div class="card p-4 lg:col-span-2">
         <div class="mb-2">
           <h2 class="text-sm font-semibold text-[var(--color-ink)]">Overall XP — last 30 days</h2>
         </div>
         {#if ratesLoading}
-          <div class="flex h-52 items-center justify-center"><Spinner size={20} /></div>
+          <div class="flex h-96 items-center justify-center"><Spinner size={20} /></div>
         {:else}
-          <LineChart
-            labels={chartLabels}
-            series={[{ label: 'Overall', color: '#f5a524', points: chartPoints }]}
-            height={220}
-            yFormat={compact}
-            tooltipValue={(n) => `${n.toLocaleString()} xp`}
-          />
+          <div class="mb-1">
+            <LineChart
+              labels={chartLabels}
+              series={[{ label: 'Overall', color: '#f5a524', points: chartPoints }]}
+              height={180}
+              yFormat={compact}
+              tooltipValue={(n) => `${n.toLocaleString()} xp`}
+            />
+          </div>
+          <div class="mt-2 border-t border-[var(--color-line)] pt-2">
+            <div class="mb-1 flex items-center justify-between">
+              <span class="text-sm font-semibold text-[var(--color-ink)]">Daily gains</span>
+              <span class="text-[10px] text-[var(--color-faint)]">xp recorded per day</span>
+            </div>
+            <LineChart
+              type="bar"
+              labels={dailyGainLabels}
+              series={[{ label: 'Daily gain', color: '#34d399', points: dailyGainPoints }]}
+              height={140}
+              yFormat={compact}
+              tooltipValue={(n) => `+${n.toLocaleString()} xp`}
+              beginAtZero
+            />
+          </div>
         {/if}
       </div>
 
-      <!-- milestones + movers -->
+        <!-- milestones + movers -->
       <div class="flex flex-col gap-5 lg:col-span-3">
         <div class="card p-4">
           <h2 class="mb-3 text-sm font-semibold text-[var(--color-ink)]">Milestone progress</h2>
@@ -259,12 +350,6 @@
                     {data.milestoneCounts.skillsAtLevelCap}<span class="text-[11px] font-medium text-[var(--color-jade)]">/{data.milestoneCounts.total}</span>
                   </div>
                   <div class="text-[10px] leading-tight text-[var(--color-faint)]">at level cap</div>
-                  <div class="mt-1 leading-tight">
-                    <span class="text-[10px] tracking-wide text-[var(--color-faint)] uppercase">Total level</span>
-                    <div class="tabular text-xs font-semibold text-[var(--color-ink)]">
-                      {num(data.overall.level)}<span class="font-normal text-[var(--color-faint)]">/{num(data.maxTotalLevel)}</span>
-                    </div>
-                  </div>
                 </div>
                 <div class="rounded-lg border border-[var(--color-line)] bg-[var(--color-bg-soft)] p-2 text-center">
                   <div class="tabular text-base font-semibold" style="color:{progressColor(data.milestoneCounts.skillsAt200m, data.milestoneCounts.total)}">
@@ -293,7 +378,7 @@
         </div>
 
         <div class="card p-4">
-          <h2 class="mb-3 text-sm font-semibold text-[var(--color-ink)]">Consistency</h2>
+          <h2 class="mb-3 text-sm font-semibold text-[var(--color-ink)]">Tracking Stats</h2>
           {#if consistency}
             <div class="flex items-end gap-1" style="height:44px" aria-hidden="true">
               {#each consistency.days.slice(-14) as d, i (d.date)}

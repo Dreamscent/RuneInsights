@@ -5,6 +5,8 @@
     LineController,
     LineElement,
     PointElement,
+    BarController,
+    BarElement,
     LinearScale,
     CategoryScale,
     Tooltip,
@@ -16,6 +18,8 @@
     LineController,
     LineElement,
     PointElement,
+    BarController,
+    BarElement,
     LinearScale,
     CategoryScale,
     Tooltip,
@@ -36,6 +40,7 @@
     yFormat = (n: number) => String(n),
     tooltipValue,
     beginAtZero = false,
+    type = 'line',
   }: {
     labels: string[];
     series: Series[];
@@ -43,10 +48,12 @@
     yFormat?: (n: number) => string;
     tooltipValue?: (n: number) => string;
     beginAtZero?: boolean;
+    type?: 'line' | 'bar';
   } = $props();
 
   let canvas = $state<HTMLCanvasElement | null>(null);
   let chart: Chart | null = null;
+  let activeType: 'line' | 'bar' = 'line';
 
   function hexA(hex: string, a: number): string {
     const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -55,23 +62,39 @@
     return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
   }
 
-  function datasets(list: Series[]) {
-    return list.map((s) => ({
-      label: s.label,
-      data: s.points,
-      borderColor: s.color,
-      borderWidth: 2,
-      tension: 0.32,
-      fill: true,
-      backgroundColor: (ctx: { chart: Chart }) => {
-        const area = ctx.chart.chartArea;
-        if (!area) return hexA(s.color, 0.12);
-        const g = ctx.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
-        g.addColorStop(0, hexA(s.color, 0.28));
-        g.addColorStop(1, hexA(s.color, 0));
-        return g;
-      },
-    }));
+  function datasets(list: Series[], chartType: 'line' | 'bar') {
+    return list.map((s) => {
+      const base = {
+        label: s.label,
+        data: s.points,
+        borderColor: s.color,
+      };
+      if (chartType === 'bar') {
+        return {
+          ...base,
+          borderWidth: 0,
+          fill: false,
+          borderRadius: 4,
+          borderSkipped: false,
+          backgroundColor: hexA(s.color, 0.75),
+          hoverBackgroundColor: hexA(s.color, 1),
+        };
+      }
+      return {
+        ...base,
+        borderWidth: 2,
+        tension: 0.32,
+        fill: true,
+        backgroundColor: (ctx: { chart: Chart }) => {
+          const area = ctx.chart.chartArea;
+          if (!area) return hexA(s.color, 0.12);
+          const g = ctx.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+          g.addColorStop(0, hexA(s.color, 0.28));
+          g.addColorStop(1, hexA(s.color, 0));
+          return g;
+        },
+      };
+    });
   }
 
   $effect(() => {
@@ -81,12 +104,15 @@
     const yf = yFormat;
     const tv = tooltipValue;
     const bz = beginAtZero;
+    const t = type;
     if (!canvas) return;
 
-    if (!chart) {
+    if (!chart || activeType !== t) {
+      chart?.destroy();
+      activeType = t;
       chart = new Chart(canvas, {
-        type: 'line',
-        data: { labels: l, datasets: datasets(s) },
+        type: t,
+        data: { labels: l, datasets: datasets(s, t) },
         options: {
           responsive: true,
           maintainAspectRatio: false,
@@ -102,7 +128,7 @@
                 boxWidth: 10,
                 boxHeight: 10,
                 usePointStyle: true,
-                pointStyle: 'circle',
+                pointStyle: t === 'bar' ? 'rect' : 'circle',
                 font: { size: 11 },
               },
             },
@@ -137,13 +163,15 @@
               },
             },
           },
-          elements: { point: { radius: 0, hoverRadius: 4, hitRadius: 14 } },
+          elements: {
+            point: { radius: t === 'line' ? 0 : 0, hoverRadius: 4, hitRadius: 14 },
+          },
         },
       });
     } else {
       chart.data.labels = l;
-      chart.data.datasets = datasets(s);
-      const yScale = chart.options.scales?.y;
+      chart.data.datasets = datasets(s, t);
+      const yScale = chart.options.scales?.y as { beginAtZero?: boolean } | undefined;
       if (yScale) yScale.beginAtZero = bz;
       chart.update();
     }

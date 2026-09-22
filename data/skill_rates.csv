@@ -19,7 +19,7 @@ Defence,0,
 Strength,250000,Vyres(Split exp 2 way)
 Hitpoints,465000,POH Elite Profane Scarabites
 Hitpoints,160000,Melee Vyres
-Ranged,0,
+Ranged,480000,Ranged Vyres
 Prayer,380000,Melee Vyres
 Magic,1400000,POH Elite Profane Scarabites
 Cooking,0,
@@ -33,7 +33,7 @@ Mining,0,
 Herblore,0,
 Agility,0,
 Thieving,1200000,Pickpocking Vyres
-Slayer,0,
+Slayer,585000,Abyssal Demons
 Farming,110000,Melee Vyres
 Runecraft,900000,Runic Attuner RC
 Hunter,350000,Afk Croesus Front
