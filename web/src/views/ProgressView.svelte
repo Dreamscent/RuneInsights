@@ -194,7 +194,15 @@
             <div class="flex items-center gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-bg-soft)] px-3 py-2">
               <SkillIcon skillKey={s.key} name={s.name} size={26} rounded={7} />
               <div class="w-28 min-w-0">
-                <div class="truncate text-xs text-[var(--color-ink)]">{s.name}</div>
+                <div class="flex items-center gap-1.5">
+                  <span class="truncate text-xs text-[var(--color-ink)]">{s.name}</span>
+                  {#if s.levelsGained > 0}
+                    <span
+                      class="tabular rounded-full bg-[rgba(167,139,250,.14)] px-1.5 text-[9px] font-medium text-[var(--color-violet)]"
+                      title="Virtual levels gained in this window"
+                    >+{s.levelsGained}</span>
+                  {/if}
+                </div>
                 {#if s.rankChange != null && s.rankChange !== 0}
                   {@const up = s.rankChange < 0}
                   <button

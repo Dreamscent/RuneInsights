@@ -384,14 +384,21 @@
                 <td class="tabular hidden px-3 py-2.5 text-right md:table-cell">
                   {#if gainValues.get(s.key) === null}
                     {#if fallbackGain.active && fallbackGain.map.get(s.key)}
-                      <span class="text-[var(--color-sky)]" title="No full {gainWindow} of history yet — showing total XP gained since tracking began">
+                      <span class="text-[var(--color-sky)]" title="No full {gainWindow === 'day' ? '1 day' : gainWindow === 'week' ? '1 week' : gainWindow === 'month' ? '30 days' : '1 year'} of history yet — showing total XP gained since tracking began">
                         {signedCompact(fallbackGain.map.get(s.key)!)}
                       </span>
                     {:else}
                       <span class="text-[var(--color-faint)]" title="Need a baseline snapshot ≥ {gainWindow === 'day' ? '1 day' : gainWindow === 'week' ? '1 week' : gainWindow === 'month' ? '30 days' : '1 year'} old">—</span>
                     {/if}
                   {:else}
-                    <span class="text-[var(--color-jade)]">{signedCompact(gainValues.get(s.key))}</span>
+                    <div class="leading-tight">
+                      <span class="text-[var(--color-jade)]">{signedCompact(gainValues.get(s.key))}</span>
+                      {#if (ratesByWindow[gainWindow]?.skills.find((x) => x.key === s.key)?.levelsGained ?? 0) > 0}
+                        <div class="text-[10px] text-[var(--color-violet)]">
+                          +{ratesByWindow[gainWindow]!.skills.find((x) => x.key === s.key)!.levelsGained} lvl
+                        </div>
+                      {/if}
+                    </div>
                   {/if}
                 </td>
 

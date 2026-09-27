@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"runeinsights/internal/db"
+	"runeinsights/internal/xp"
 )
 
 type Period string
@@ -53,6 +54,9 @@ type SkillGain struct {
 	TrackingGain  int64 `json:"trackingGain"`
 	Rank          *int `json:"rank"`         // current hiscore rank (nil when unranked)
 	RankChange    *int `json:"rankChange"` // latest vs baseline; negative = climbed
+	// LevelsGained: change of the virtual level over the window (each skill on
+	// its own XP curve; Invention uses the elite curve).
+	LevelsGained int64 `json:"levelsGained"`
 }
 
 type Rates struct {
@@ -177,6 +181,17 @@ func ComputeRates(d *db.DB, playerID int64, p Period, now time.Time) (*Rates, er
 				d := cur.Rank - prev.Rank
 				g.RankChange = &d
 			}
+			var v1, v2 int64
+			if k == "invention" {
+				v1 = int64(xp.InventionLevelFromXP(cur.XP))
+				v2 = int64(xp.InventionLevelFromXP(prev.XP))
+			} else {
+				v1 = int64(xp.LevelFromXP(cur.XP))
+				v2 = int64(xp.LevelFromXP(prev.XP))
+			}
+			if v1 > v2 {
+				g.LevelsGained = v1 - v2
+			}
 		}
 		out.Skills = append(out.Skills, g)
 	}
@@ -194,6 +209,10 @@ func ComputeRates(d *db.DB, playerID int64, p Period, now time.Time) (*Rates, er
 			if cur.Rank >= 0 && prev.Rank >= 0 {
 				d := cur.Rank - prev.Rank
 				out.Overall.RankChange = &d
+			}
+			lg := int64(xp.LevelFromXP(cur.XP)) - int64(xp.LevelFromXP(prev.XP))
+			if lg > 0 {
+				out.Overall.LevelsGained = lg
 			}
 		}
 	}

@@ -76,6 +76,8 @@ export interface SkillGain {
   rank: number | null;
   /** latest vs baseline rank; negative = climbed */
   rankChange: number | null;
+  /** virtual levels gained over the window */
+  levelsGained: number;
 }
 
 export interface Rates {
