@@ -408,10 +408,10 @@
                   {:else if s.elite}
                     <span class="text-xs text-[var(--color-faint)]">different XP curve</span>
                   {:else}
-                    {@const filled = Math.round((s.xpIntoLevel / Math.max(1, s.xpIntoLevel + s.xpToNext)) * 100)}
+                    {@const filled = Math.round((s.xpIntoLevel / Math.max(1, s.xpToNext)) * 100)}
                     <ProgressBar pctValue={filled} color={color.accent} height={6} />
                     <div class="tabular mt-1 text-[11px] text-[var(--color-muted)]">
-                      {compact(s.xpToNext)} xp to {s.virtualLevel > s.level ? 'virtual' : ''} level {s.virtualLevel + 1}
+                      {compact(s.xpToNext - s.xpIntoLevel)} xp to {s.virtualLevel > s.level ? 'virtual' : ''} level {s.virtualLevel + 1}
                       {#if s.nextLevelEtaHours != null}<span class="text-[var(--color-gold)]"> · ≈ {duration(s.nextLevelEtaHours)}</span>{/if}
                     </div>
                   {/if}
@@ -510,18 +510,18 @@
         <div>
           <div class="mb-1.5 flex items-center justify-between text-xs text-[var(--color-muted)]">
             <span>Progress to {selected.virtualLevel > selected.level ? 'virtual' : ''} level {selected.virtualLevel + 1}</span>
-            <span class="tabular" title="exact: {selected.xpIntoLevel.toLocaleString()} of {(selected.xpIntoLevel + selected.xpToNext).toLocaleString()} xp">
-              {compact(selected.xpIntoLevel)} / {compact(selected.xpIntoLevel + selected.xpToNext)}
+            <span class="tabular" title="exact: {selected.xpIntoLevel.toLocaleString()} of {selected.xpToNext.toLocaleString()} xp">
+              {compact(selected.xpIntoLevel)} / {compact(selected.xpToNext)}
             </span>
           </div>
           <ProgressBar
-            pctValue={(selected.xpIntoLevel / Math.max(1, selected.xpIntoLevel + selected.xpToNext)) * 100}
+            pctValue={(selected.xpIntoLevel / Math.max(1, selected.xpToNext)) * 100}
             color={skillColor(selected.key).accent}
             height={10}
           />
           <div class="tabular mt-1.5 flex items-center justify-between text-[11px] text-[var(--color-muted)]">
             <span>
-              {num(selected.xpIntoLevel)} / {num(selected.xpIntoLevel + selected.xpToNext)} xp
+              {num(selected.xpIntoLevel)} / {num(selected.xpToNext)} xp
               {#if selected.ratePerDay > 0.5}
                 · gained in <span class="text-[var(--color-sky)]">{Math.max(0, selected.xpToNext - selected.xpIntoLevel) <= 0 ? 'now' : duration(((selected.xpToNext - selected.xpIntoLevel) / selected.ratePerDay))}</span> at the 30d pace
               {/if}

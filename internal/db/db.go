@@ -429,9 +429,6 @@ func (d *DB) FirstSnapshotAt(playerID int64) (*time.Time, error) {
 	return &t, nil
 }
 
-
-
-
 // FocusList returns the player's focused skill keys in pin order.
 func (d *DB) FocusList(playerID int64) ([]string, error) {
 	rows, err := d.Query(

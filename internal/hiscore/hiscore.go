@@ -144,10 +144,10 @@ func (c *Client) FetchPlayer(ctx context.Context, accountType, name string) (*Pl
 
 // LeaderboardRow is one entry from the top-50 ranking endpoint.
 type LeaderboardRow struct {
-	Rank     int    `json:"rank"`
-	Name     string `json:"name"`
-	Score    int64  `json:"score"` // XP for skills, score for activities
-	Level    int    `json:"level,omitempty"`
+	Rank  int    `json:"rank"`
+	Name  string `json:"name"`
+	Score int64  `json:"score"` // XP for skills, score for activities
+	Level int    `json:"level,omitempty"`
 }
 
 // FetchLeaderboard returns up to 50 top players for a table. The upstream
@@ -203,10 +203,10 @@ func (c *Client) FetchLeaderboard(ctx context.Context, table, category string) (
 // ClanMember is one row of the clan members CSV
 // (header: "Clanmate, Clan Rank, Total XP, Kills"; rows sorted by clan rank).
 type ClanMember struct {
-	Name     string `json:"name"`
-	Rank     int    `json:"rank"` // 0=Owner, 1=General, ... 6=Recruit
-	OverallXP int64 `json:"overallXp"`
-	Kills    int64  `json:"kills"`
+	Name      string `json:"name"`
+	Rank      int    `json:"rank"` // 0=Owner, 1=General, ... 6=Recruit
+	OverallXP int64  `json:"overallXp"`
+	Kills     int64  `json:"kills"`
 }
 
 var clanRankOrdinal = map[string]int{

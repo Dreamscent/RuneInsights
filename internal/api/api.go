@@ -4,8 +4,8 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"errors"
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -303,21 +303,21 @@ type SkillView struct {
 	RatePerDay   float64 `json:"ratePerDay"`
 
 	// Training-rate estimates come from the human-editable skill_rates.csv.
-	XpPerHour       float64  `json:"xpPerHour"`
-	Method          string   `json:"method"`
-	NextLevelEtaHours *float64 `json:"nextLevelEtaHours"`
-	Next            *MilestoneView `json:"next"`
+	XpPerHour         float64        `json:"xpPerHour"`
+	Method            string         `json:"method"`
+	NextLevelEtaHours *float64       `json:"nextLevelEtaHours"`
+	Next              *MilestoneView `json:"next"`
 }
 
 type SkillsResponse struct {
-	Player          *db.Player `json:"player"`
-	Overall         *SkillView `json:"overall"`
-	CombatLevel     int        `json:"combatLevel"`
-	Skills          []SkillView `json:"skills"`
-	SnapshotAt      *time.Time `json:"snapshotAt"`
-	SnapshotCount   int        `json:"snapshotCount"`
-	CollectingSince *time.Time `json:"collectingSince"`
-	RatesAvailable  bool       `json:"ratesAvailable"`
+	Player          *db.Player      `json:"player"`
+	Overall         *SkillView      `json:"overall"`
+	CombatLevel     int             `json:"combatLevel"`
+	Skills          []SkillView     `json:"skills"`
+	SnapshotAt      *time.Time      `json:"snapshotAt"`
+	SnapshotCount   int             `json:"snapshotCount"`
+	CollectingSince *time.Time      `json:"collectingSince"`
+	RatesAvailable  bool            `json:"ratesAvailable"`
 	MilestoneCounts MilestoneCounts `json:"milestoneCounts"`
 	// TotalLevel is the hiscore overall level; MaxTotalLevel is the sum of
 	// every skill's in-game maximum level (varies per skill: 99/110/120).
@@ -336,14 +336,15 @@ func capXP(key string) int64 {
 	}
 	return xp.TotalXP(lvl)
 }
+
 // (thresholds on each skill's own XP curve; Invention uses the elite curve).
 type MilestoneCounts struct {
-	SkillsAt99        int `json:"skillsAt99"`
-	SkillsAt110       int `json:"skillsAt110"`
-	SkillsAt120       int `json:"skillsAt120"`
-	SkillsAt200m      int `json:"skillsAt200m"`
-	SkillsAtLevelCap  int `json:"skillsAtLevelCap"`
-	Total             int `json:"total"`
+	SkillsAt99       int `json:"skillsAt99"`
+	SkillsAt110      int `json:"skillsAt110"`
+	SkillsAt120      int `json:"skillsAt120"`
+	SkillsAt200m     int `json:"skillsAt200m"`
+	SkillsAtLevelCap int `json:"skillsAtLevelCap"`
+	Total            int `json:"total"`
 }
 
 // SkillsAtLevelCap counts skills that have reached their own in-game maximum

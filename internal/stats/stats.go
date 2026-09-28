@@ -51,9 +51,9 @@ type SkillGain struct {
 	HasBaseline bool    `json:"hasBaseline"`
 	// TrackingGain is the XP gained since the very first snapshot. The UI
 	// shows it as a fallback for periods whose baseline does not exist yet.
-	TrackingGain  int64 `json:"trackingGain"`
-	Rank          *int `json:"rank"`         // current hiscore rank (nil when unranked)
-	RankChange    *int `json:"rankChange"` // latest vs baseline; negative = climbed
+	TrackingGain int64 `json:"trackingGain"`
+	Rank         *int  `json:"rank"`       // current hiscore rank (nil when unranked)
+	RankChange   *int  `json:"rankChange"` // latest vs baseline; negative = climbed
 	// LevelsGained: change of the virtual level over the window (each skill on
 	// its own XP curve; Invention uses the elite curve).
 	LevelsGained int64 `json:"levelsGained"`
@@ -71,9 +71,9 @@ type Rates struct {
 	// Tracking totals: XP gained since the very first snapshot, independent of
 	// the period. The UI shows these as a fallback when a period has no
 	// baseline yet, with TrackingDays describing how long data exists for.
-	TrackingGain int64     `json:"trackingGain"`
+	TrackingGain  int64      `json:"trackingGain"`
 	TrackingSince *time.Time `json:"trackingSince"`
-	TrackingDays  float64   `json:"trackingDays"`
+	TrackingDays  float64    `json:"trackingDays"`
 }
 
 // ComputeRates compares the latest snapshot against the latest snapshot taken
@@ -248,7 +248,7 @@ type DailyGainPoint struct {
 type Consistency struct {
 	Days        []DailyGainPoint `json:"days"`
 	TotalGained int64            `json:"totalGained"`
-	ActiveDays  int              `json:"activeDays"`       // days with Gain > 0
+	ActiveDays  int              `json:"activeDays"` // days with Gain > 0
 	BestDate    string           `json:"bestDate"`
 	BestGain    int64            `json:"bestGain"`
 	Streak      int              `json:"streak"` // consecutive active days ending at the latest active day
@@ -334,7 +334,7 @@ func DailyGains(d *db.DB, playerID int64) (*Consistency, error) {
 		if pt.Gain > 0 {
 			if streak > 0 {
 				// must be yesterday-continuous
-				if !day.Add(24*time.Hour).Equal(lastCounted) {
+				if !day.Add(24 * time.Hour).Equal(lastCounted) {
 					break
 				}
 			}
