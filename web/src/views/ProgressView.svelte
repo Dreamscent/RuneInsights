@@ -187,6 +187,12 @@
               overall xp in this {period} · ≈ {decimal(rates.overall.ratePerDay, 0)} xp/day
             </div>
           </div>
+          {#if rates.overall.levelsGained > 0}
+            <span
+              class="tabular rounded-full bg-[rgba(167,139,250,.14)] px-1.5 text-[9px] font-medium text-[var(--color-violet)]"
+              title="Total level gained in this window (virtual past-cap levels do not count)"
+            >+{rates.overall.levelsGained} lvl</span>
+          {/if}
         </div>
 
         <div class="grid grid-cols-1 gap-2 md:grid-cols-2">

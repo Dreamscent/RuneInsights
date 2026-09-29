@@ -290,6 +290,12 @@
               <div class="tabular text-lg leading-tight font-semibold text-[var(--color-sky)]">{signedCompact(fallbackGain.map.get('overall'))}</div>
             {:else if gainValues.get('overall') != null}
               <div class="tabular text-lg leading-tight font-semibold text-[var(--color-jade)]">{signedCompact(gainValues.get('overall'))}</div>
+              {#if (ratesByWindow[gainWindow]?.overall?.levelsGained ?? 0) > 0}
+                <div
+                  class="tabular text-right text-[9px] font-medium text-[var(--color-violet)]"
+                  title="Total level gained in this window (virtual past-cap levels do not count)"
+                >+{ratesByWindow[gainWindow]?.overall?.levelsGained} lvl</div>
+              {/if}
             {:else}
               <div class="text-lg leading-tight font-semibold text-[var(--color-faint)]">—</div>
             {/if}

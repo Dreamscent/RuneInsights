@@ -210,8 +210,12 @@ func ComputeRates(d *db.DB, playerID int64, p Period, now time.Time) (*Rates, er
 				d := cur.Rank - prev.Rank
 				out.Overall.RankChange = &d
 			}
-			lg := int64(xp.LevelFromXP(cur.XP)) - int64(xp.LevelFromXP(prev.XP))
-			if lg > 0 {
+			// Total level: Jagex caps each skill's displayed level at its
+			// in-game cap (virtual past-cap levels never contribute), and the
+			// stored overall snapshot Level is exactly that capped total
+			// level. Diffing it therefore counts only real, earned levels.
+			lg := int64(cur.Level) - int64(prev.Level)
+			if cur.Level > 0 && prev.Level > 0 && lg > 0 {
 				out.Overall.LevelsGained = lg
 			}
 		}
