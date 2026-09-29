@@ -1,7 +1,6 @@
 # build artifacts
 /server
 /runeinsights
-/rs-companion
 *.exe
 
 # local data (keep the editable rates template; never publish the database: it contains usernames)
