@@ -34,6 +34,8 @@ export interface SkillView {
   xpPerHour: number;
   method: string;
   nextLevelEtaHours: number | null;
+  /** next level would exceed the level displayed in-game (virtual level) */
+  nextLevelVirtual: boolean;
   next: MilestoneView;
 }
 
@@ -48,7 +50,6 @@ export interface MilestoneCounts {
 
 export interface SkillsResponse {
   player: Player;
-  overall: SkillView;
   combatLevel: number;
   skills: SkillView[];
   snapshotAt: string | null;

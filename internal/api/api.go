@@ -306,7 +306,11 @@ type SkillView struct {
 	XpPerHour         float64        `json:"xpPerHour"`
 	Method            string         `json:"method"`
 	NextLevelEtaHours *float64       `json:"nextLevelEtaHours"`
-	Next              *MilestoneView `json:"next"`
+
+	// NextLevelVirtual reports that gaining one more level would exceed the
+	// level the hiscores display for the skill (a virtual level).
+	NextLevelVirtual bool             `json:"nextLevelVirtual"`
+	Next             *MilestoneView   `json:"next"`
 }
 
 type SkillsResponse struct {
@@ -425,8 +429,20 @@ func buildSkillView(s db.SkillSnapshot, rates map[string]float64, entry rates.En
 		v.NextLevelEtaHours = &eta
 	}
 
-	// Next milestone: first of 99 / 110 / 120 whose XP requirement exceeds the
-	// current XP, otherwise the 200M cap. Uses the skill's own XP curve.
+	// Levels beyond the hiscores' displayed cap are virtual; flag a next
+	// level that would cross it (e.g. heading past 99 on a 99-cap skill).
+	limit, ok := skillMaxLevel[s.Key]
+	if !ok {
+		limit = 99
+	}
+	v.NextLevelVirtual = needed > 0 && vlevel+1 > limit
+
+	// Next milestone. Overall has no level curve of its own and is not shown
+	// with a milestone. Every other skill: first of 99 / 110 / 120 whose XP
+	// requirement exceeds the current XP, otherwise the 200M cap.
+	if s.Key == "overall" {
+		return v
+	}
 	milestoneXP := xp.MaxXP
 	label := "200m xp"
 	milestones := milestoneLabels

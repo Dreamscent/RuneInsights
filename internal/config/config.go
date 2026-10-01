@@ -32,7 +32,7 @@ type Config struct {
 func defaults() Config {
 	return Config{
 		Host:           "0.0.0.0",
-		Port:           8080,
+		Port:           7777,
 		DBPath:         "./data/rs.db",
 		StaticDir:      "./web/dist",
 		SkillRatesPath: "./data/skill_rates.csv",

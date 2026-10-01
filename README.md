@@ -74,7 +74,7 @@ go build -o runeinsights ./cmd/server
 ```
 
 - The dashboard is served on **all network interfaces** (host `0.0.0.0`) at
-  **http://<your-host>:8080** — reachable from other machines/devices, not only localhost.
+  **http://<your-host>:7777** — reachable from other machines/devices, not only localhost.
   Bind it to `127.0.0.1` instead if you prefer localhost-only.
 - Data and settings live in `./data/` (SQLite database) and `config.json`.
 - Stop with `Ctrl-C`; shutdown is graceful.
@@ -84,7 +84,7 @@ Run it behind systemd, Docker or any process supervisor for a permanent setup �
 For frontend development with hot reload:
 
 ```sh
-(cd web && npm run dev)   # proxies /api requests to localhost:8080
+(cd web && npm run dev)   # proxies /api requests to localhost:7777
 ```
 
 ### Configuration
@@ -95,7 +95,7 @@ repository) and can be **overridden per-invocation with environment variables**:
 ```json
 {
   "host": "0.0.0.0",
-  "port": 8080,
+  "port": 7777,
   "dbPath": "./data/rs.db",
   "staticDir": "./web/dist",
   "skillRatesPath": "./data/skill_rates.csv"
@@ -105,7 +105,7 @@ repository) and can be **overridden per-invocation with environment variables**:
 | Setting | env var | Default | Meaning |
 | --- | --- | --- | --- |
 | `host` | `HOST` | `0.0.0.0` | Interface to bind (`127.0.0.1` = localhost only) |
-| `port` | `PORT` | `8080` | HTTP listen port |
+| `port` | `PORT` | `7777` | HTTP listen port |
 | `dbPath` | `DB_PATH` | `./data/rs.db` | SQLite database file (created automatically) |
 | `staticDir` | `STATIC_DIR` | `./web/dist` | Built frontend; falls back to an API-only notice if missing |
 | `skillRatesPath` | `SKILL_RATES_PATH` | `./data/skill_rates.csv` | Training-rate file (hot-reloaded) |
@@ -131,13 +131,13 @@ Restart=on-failure
 WantedBy=multi-user.target
 ```
 
-`sudo systemctl enable --now runeinsights`, then open `http://<host>:8080`.
+`sudo systemctl enable --now runeinsights`, then open `http://<host>:7777`.
 
 ### Docker
 
 ```sh
 docker build -t runeinsights .
-docker run -d -p 8080:8080 -v rs-data:/home/app/data runeinsights
+docker run -d -p 7777:7777 -v rs-data:/home/app/data runeinsights
 ```
 
 ## Training rates

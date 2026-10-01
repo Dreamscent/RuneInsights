@@ -23,6 +23,6 @@ WORKDIR /home/app
 COPY --from=gobuild /runeinsights /usr/local/bin/runeinsights
 COPY --from=webbuild /app/web/dist ./web/dist
 VOLUME /home/app/data
-ENV PORT=8080 DB_PATH=/home/app/data/rs.db STATIC_DIR=/home/app/web/dist
-EXPOSE 8080
+ENV PORT=7777 DB_PATH=/home/app/data/rs.db STATIC_DIR=/home/app/web/dist
+EXPOSE 7777
 ENTRYPOINT ["runeinsights"]

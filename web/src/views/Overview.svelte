@@ -6,7 +6,7 @@
   import Spinner from '../components/Spinner.svelte';
   import LineChart from '../components/LineChart.svelte';
   import ProgressBar from '../components/ProgressBar.svelte';
-  import { compact, decimal, duration, num, pct, signedCompact, dateTime } from '../lib/format';
+  import { compact, decimal, duration, num, signedCompact, dateTime } from '../lib/format';
 
   const data = $derived(store.skills);
 
@@ -86,16 +86,27 @@
     consistency?.days.filter((d) => d.gain >= 0).slice(-30).map((d) => d.gain) ?? [],
   );
 
-  const milestoneStats = $derived.by(() => {
+  const milestonePctAvg = $derived.by(() => {
     const skills = data?.skills ?? [];
-    if (skills.length === 0) return { pctAvg: 0, complete: 0, count: 0, closest: [] };
-    const pctAvg = skills.reduce((acc, s) => acc + s.next.pct, 0) / skills.length;
-    const complete = skills.filter((s) => s.next.remaining === 0).length;
-    const closest = skills
-      .filter((s) => s.next && s.next.remaining > 0)
-      .sort((a, b) => b.next.pct - a.next.pct)
-      .slice(0, 3);
-    return { pctAvg, complete, count: skills.length, closest };
+    if (skills.length === 0) return 0;
+    return skills.reduce((acc, s) => acc + s.next.pct, 0) / skills.length;
+  });
+
+  // Skills closest to gaining their next level: fewest XP outstanding, top 5.
+  // Virtual moves (past what the hiscores display) are flagged separately.
+  const closestToLevel = $derived.by(() => {
+    const skills = data?.skills ?? [];
+    return skills
+      .filter((s) => s.xpToNext > s.xpIntoLevel)
+      .map((s) => ({
+        key: s.key,
+        name: s.name,
+        nextLevel: s.virtualLevel + 1,
+        virtual: s.nextLevelVirtual,
+        expRequired: s.xpToNext - s.xpIntoLevel,
+      }))
+      .sort((a, b) => a.expRequired - b.expRequired)
+      .slice(0, 5);
   });
 
   const maxedCount = $derived((data?.skills ?? []).filter((s) => s.maxed).length);
@@ -309,13 +320,13 @@
                   stroke-width="9"
                   stroke-linecap="round"
                   stroke-dasharray={ringC}
-                  stroke-dashoffset={ringC * (1 - milestoneStats.pctAvg / 100)}
+                  stroke-dashoffset={ringC * (1 - milestonePctAvg / 100)}
                   transform="rotate(-90 60 60)"
                   style="transition: stroke-dashoffset 600ms ease"
                 ></circle>
               </svg>
               <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <span class="tabular text-lg font-semibold">{decimal(milestoneStats.pctAvg, 0)}%</span>
+                <span class="tabular text-lg font-semibold">{decimal(milestonePctAvg, 0)}%</span>
                 <span class="text-[10px] text-[var(--color-faint)]">toward 200m</span>
               </div>
             </div>
@@ -360,39 +371,47 @@
                   </div>
                 </div>
               </div>
-              {#if milestoneStats.closest.length > 0}
-                <div class="mt-2 space-y-1">
-                  {#each milestoneStats.closest as s (s.key)}
-                    <div class="flex items-center gap-1.5">
-                      <SkillIcon skillKey={s.key} name={s.name} size={16} rounded={4} dim />
-                      <span class="truncate text-[var(--color-muted)]">{s.name}</span>
-                      <span class="tabular ml-auto text-[var(--color-jade)]">
-                        {pct(Math.min(100, s.next.pct), 0)}
-                      </span>
-                    </div>
-                  {/each}
-                </div>
-              {/if}
             </div>
           </div>
         </div>
 
+        <!-- closest to leveling -->
         <div class="card p-4">
-          <h2 class="mb-3 text-sm font-semibold text-[var(--color-ink)]">Tracking Stats</h2>
-          {#if consistency}
-            <div class="flex items-end gap-1" style="height:44px" aria-hidden="true">
-              {#each consistency.days.slice(-14) as d, i (d.date)}
-                {@const maxG = Math.max(1, ...consistency!.days.slice(-14).map((x) => x.gain))}
-                {@const h = d.gain < 0 ? 4 : Math.max(3, Math.round((d.gain / maxG) * 38))}
-                <div
-                  class="flex-1 rounded-t transition-all"
-                  style="height:{h}px;background:{d.gain > 0 ? 'var(--color-jade)' : 'rgba(255,255,255,.08)'}"
-                  title="{d.date}: {d.gain < 0 ? 'first snapshot' : signedCompact(d.gain) + ' xp'}"
-                ></div>
+          <h2 class="mb-3 text-sm font-semibold text-[var(--color-ink)]">Closest to leveling</h2>
+          {#if closestToLevel.length === 0}
+            <p class="py-2 text-xs text-[var(--color-muted)]">
+              Every skill is at its XP cap — nothing left to level.
+            </p>
+          {:else}
+            <div class="flex flex-col divide-y divide-[var(--color-line)]">
+              {#each closestToLevel as s (s.key)}
+                <div class="flex items-center gap-3 py-2">
+                  <SkillIcon skillKey={s.key} name={s.name} size={26} rounded={7} />
+                  <span class="truncate text-sm text-[var(--color-ink)]">{s.name}</span>
+                  {#if s.virtual}
+                    <span
+                      class="text-[9px] font-semibold uppercase tracking-wide text-[var(--color-gold-soft)]"
+                      title="level beyond what the hiscores display"
+                      >virtual</span
+                    >
+                  {/if}
+                  <span class="tabular ml-auto text-xs text-[var(--color-muted)]" title="{num(s.expRequired)} xp required">
+                    {compact(s.expRequired)} xp required
+                  </span>
+                  <span
+                    class="tabular w-12 text-right text-sm font-semibold"
+                    style="color:{s.virtual ? 'var(--color-gold-soft)' : 'var(--color-jade)'}"
+                    >→ {s.nextLevel}</span
+                  >
+                </div>
               {/each}
             </div>
           {/if}
-          <div class="mt-3 grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+        </div>
+
+        <div class="card p-4">
+          <h2 class="mb-3 text-sm font-semibold text-[var(--color-ink)]">Tracking Stats</h2>
+          <div class="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
             <div class="rounded-lg border border-[var(--color-line)] bg-[var(--color-bg-soft)] p-2 text-center">
               <div class="tabular text-sm font-semibold text-[var(--color-ink)]">{num(consistency?.activeDays ?? 0)}</div>
               <div class="text-[10px] text-[var(--color-faint)]">active days</div>

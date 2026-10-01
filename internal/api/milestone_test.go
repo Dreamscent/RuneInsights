@@ -61,6 +61,18 @@ func TestMilestonePickAndETA(t *testing.T) {
 	}
 }
 
+// Overall has no level curve and no milestone shown in the UI.
+func TestOverallHasNoMilestone(t *testing.T) {
+	sv := buildSkillView(
+		db.SkillSnapshot{Key: "overall", Name: "Overall", Level: 3105, XP: 1_692_830_437},
+		map[string]float64{},
+		rates.Entry{},
+	)
+	if sv.Next != nil {
+		t.Fatalf("overall Next = %+v, want nil", sv.Next)
+	}
+}
+
 // (needed-into)/perHour must be the next-level ETA.
 func TestNextLevelETA(t *testing.T) {
 	sv := buildSkillView(
