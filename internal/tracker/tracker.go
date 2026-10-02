@@ -33,8 +33,11 @@ func New(d *db.DB, c *hiscore.Client) *Tracker {
 }
 
 // Run polls players whose individual interval has elapsed until ctx is done.
+// It also downsamples old snapshot history once per day.
 func (t *Tracker) Run(ctx context.Context) {
 	t.Tick(ctx)
+	t.trimHistory()
+	lastTrim := time.Now()
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 	for {
@@ -42,7 +45,26 @@ func (t *Tracker) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			if time.Since(lastTrim) >= 24*time.Hour {
+				t.trimHistory()
+				lastTrim = time.Now()
+			}
 			t.Tick(ctx)
+		}
+	}
+}
+
+// trimHistory downsamples snapshots older than the hot window for every
+// player, leaving one snapshot per ISO week in the cold tail.
+func (t *Tracker) trimHistory() {
+	players, err := t.db.ListPlayers()
+	if err != nil {
+		log.Printf("tracker: list players for trim: %v", err)
+		return
+	}
+	for _, p := range players {
+		if err := t.db.TrimSnapshots(p.ID); err != nil {
+			log.Printf("tracker: trim snapshots for %s: %v", p.Name, err)
 		}
 	}
 }

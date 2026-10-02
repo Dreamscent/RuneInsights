@@ -291,6 +291,36 @@ func (d *DB) InsertSnapshot(playerID int64, at time.Time, skills []SkillSnapshot
 	return snapID, nil
 }
 
+// hotRetention is how long snapshots are kept at daily fidelity before being
+// downsampled to one snapshot per ISO week.
+const hotRetention = 90 * 24 * time.Hour
+
+// TrimSnapshots downsamples a player's snapshot history. Snapshots newer than
+// hotRetention are untouched; older ones are reduced to the latest snapshot of
+// each ISO week, which is then kept forever. Skill and activity rows cascade
+// with their parent snapshot.
+func (d *DB) TrimSnapshots(playerID int64) error {
+	tx, err := d.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// fetched_at is RFC3339 in UTC, so substr(...,1,10) is the UTC date and
+	// lexicographically comparable.
+	cutoff := time.Now().UTC().Add(-hotRetention).Format("2006-01-02")
+	if _, err := tx.Exec(`DELETE FROM snapshots
+		WHERE player_id=? AND substr(fetched_at,1,10) < ?
+		  AND id NOT IN (
+			SELECT MAX(id) FROM snapshots
+			WHERE player_id=? AND substr(fetched_at,1,10) < ?
+			GROUP BY strftime('%Y-%W', fetched_at)
+		  )`, playerID, cutoff, playerID, cutoff); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (d *DB) loadSnapshot(id int64) (*Snapshot, error) {
 	s := &Snapshot{Skills: map[string]SkillSnapshot{}, Activities: map[string]ActivitySnapshot{}}
 	var playerID int64
