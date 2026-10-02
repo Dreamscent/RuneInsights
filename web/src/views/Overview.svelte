@@ -6,7 +6,7 @@
   import Spinner from '../components/Spinner.svelte';
   import LineChart from '../components/LineChart.svelte';
   import ProgressBar from '../components/ProgressBar.svelte';
-  import { compact, decimal, duration, num, signedCompact, dateTime } from '../lib/format';
+  import { compact, decimal, duration, num, pct, signedCompact, dateTime } from '../lib/format';
 
   const data = $derived(store.skills);
 
@@ -92,20 +92,25 @@
     return skills.reduce((acc, s) => acc + s.next.pct, 0) / skills.length;
   });
 
-  // Skills closest to gaining their next level: fewest XP outstanding, top 5.
-  // Virtual moves (past what the hiscores display) are flagged separately.
+  let includeVirtual = $state(true);
+  let closestSortByPct = $state(false);
+
+  // Skills closest to gaining their next level, top 5. Toggle to include or
+  // hide virtual gains (past what the hiscores display) and to rank by raw
+  // XP outstanding or by percent progress into the current level.
   const closestToLevel = $derived.by(() => {
     const skills = data?.skills ?? [];
     return skills
-      .filter((s) => s.xpToNext > s.xpIntoLevel)
+      .filter((s) => s.xpToNext > s.xpIntoLevel && (includeVirtual || !s.nextLevelVirtual))
       .map((s) => ({
         key: s.key,
         name: s.name,
         nextLevel: s.virtualLevel + 1,
         virtual: s.nextLevelVirtual,
         expRequired: s.xpToNext - s.xpIntoLevel,
+        pct: (s.xpIntoLevel / s.xpToNext) * 100,
       }))
-      .sort((a, b) => a.expRequired - b.expRequired)
+      .sort((a, b) => (closestSortByPct ? b.pct - a.pct : a.expRequired - b.expRequired))
       .slice(0, 5);
   });
 
@@ -377,10 +382,34 @@
 
         <!-- closest to leveling -->
         <div class="card p-4">
-          <h2 class="mb-3 text-sm font-semibold text-[var(--color-ink)]">Closest to leveling</h2>
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-[var(--color-ink)]">Closest to leveling</h2>
+            <div class="flex items-center gap-2.5 text-[11px]">
+              <button
+                class="transition-colors {includeVirtual
+                  ? 'text-[var(--color-gold)]'
+                  : 'text-[var(--color-faint)] hover:text-[var(--color-muted)]'}"
+                onclick={() => (includeVirtual = !includeVirtual)}
+                title={includeVirtual
+                  ? 'Including skills leveling past the displayed level cap — click to hide them'
+                  : 'Virtual levels hidden — click to include them'}
+              >
+                {includeVirtual ? '✓' : '✗'} virtual levels
+              </button>
+              <button
+                class="text-[var(--color-faint)] transition-colors hover:text-[var(--color-muted)]"
+                onclick={() => (closestSortByPct = !closestSortByPct)}
+                title="Change the ranking metric"
+              >
+                sort: {closestSortByPct ? '% progress' : 'xp required'}
+              </button>
+            </div>
+          </div>
           {#if closestToLevel.length === 0}
             <p class="py-2 text-xs text-[var(--color-muted)]">
-              Every skill is at its XP cap — nothing left to level.
+              {includeVirtual
+                ? 'Every skill is at its XP cap — nothing left to level.'
+                : 'Nothing qualifies with virtual levels hidden — toggle them back on.'}
             </p>
           {:else}
             <div class="flex flex-col divide-y divide-[var(--color-line)]">
@@ -395,9 +424,16 @@
                       >virtual</span
                     >
                   {/if}
-                  <span class="tabular ml-auto text-xs text-[var(--color-muted)]" title="{num(s.expRequired)} xp required">
-                    {compact(s.expRequired)} xp required
-                  </span>
+                  {#if closestSortByPct}
+                    <span class="tabular ml-auto text-xs font-medium text-[var(--color-ink)]">{pct(s.pct, 1)}</span>
+                    <span class="tabular text-[10px] text-[var(--color-faint)]" title="{num(s.expRequired)} xp required">
+                      {compact(s.expRequired)} xp
+                    </span>
+                  {:else}
+                    <span class="tabular ml-auto text-xs text-[var(--color-muted)]" title="{num(s.expRequired)} xp required">
+                      {compact(s.expRequired)} xp required
+                    </span>
+                  {/if}
                   <span
                     class="tabular w-12 text-right text-sm font-semibold"
                     style="color:{s.virtual ? 'var(--color-gold-soft)' : 'var(--color-jade)'}"
