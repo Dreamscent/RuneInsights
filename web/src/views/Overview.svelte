@@ -384,25 +384,52 @@
         <div class="card p-4">
           <div class="mb-3 flex items-center justify-between">
             <h2 class="text-sm font-semibold text-[var(--color-ink)]">Closest to leveling</h2>
-            <div class="flex items-center gap-2.5 text-[11px]">
+            <div class="flex items-center gap-2">
+              <!-- include/exclude virtual gains -->
               <button
-                class="transition-colors {includeVirtual
-                  ? 'text-[var(--color-gold)]'
-                  : 'text-[var(--color-faint)] hover:text-[var(--color-muted)]'}"
+                class="flex cursor-pointer items-center gap-1.5 rounded-full border py-0.5 pr-2 pl-1 text-[10px] font-medium transition-colors {includeVirtual
+                  ? 'border-[var(--color-gold-soft)] text-[var(--color-gold-soft)]'
+                  : 'border-[var(--color-line)] text-[var(--color-faint)] hover:border-[var(--color-line-2)] hover:text-[var(--color-muted)]'}"
                 onclick={() => (includeVirtual = !includeVirtual)}
+                aria-pressed={includeVirtual}
                 title={includeVirtual
                   ? 'Including skills leveling past the displayed level cap — click to hide them'
                   : 'Virtual levels hidden — click to include them'}
               >
-                {includeVirtual ? '✓' : '✗'} virtual levels
+                <span
+                  class="relative h-3 w-5 rounded-full transition-colors"
+                  style="background:{includeVirtual ? 'var(--color-gold-soft)' : 'var(--color-line-2)'}"
+                >
+                  <span
+                    class="absolute top-[2px] h-2 w-2 rounded-full bg-[var(--color-bg)] transition-all"
+                    style="left:{includeVirtual ? '9px' : '1px'}"
+                  ></span>
+                </span>
+                virtual
               </button>
-              <button
-                class="text-[var(--color-faint)] transition-colors hover:text-[var(--color-muted)]"
-                onclick={() => (closestSortByPct = !closestSortByPct)}
-                title="Change the ranking metric"
+              <!-- ranking metric -->
+              <div
+                class="flex items-center gap-0.5 rounded-full border border-[var(--color-line)] p-0.5 text-[10px] font-medium"
+                role="group"
+                aria-label="Ranking metric"
               >
-                sort: {closestSortByPct ? '% progress' : 'xp required'}
-              </button>
+                <button
+                  class="cursor-pointer rounded-full px-2 py-[2px] transition-colors {!closestSortByPct
+                    ? 'bg-[var(--color-bg-soft)] text-[var(--color-ink)]'
+                    : 'text-[var(--color-faint)] hover:text-[var(--color-muted)]'}"
+                  onclick={() => (closestSortByPct = false)}
+                >
+                  xp
+                </button>
+                <button
+                  class="cursor-pointer rounded-full px-2 py-[2px] transition-colors {closestSortByPct
+                    ? 'bg-[var(--color-bg-soft)] text-[var(--color-ink)]'
+                    : 'text-[var(--color-faint)] hover:text-[var(--color-muted)]'}"
+                  onclick={() => (closestSortByPct = true)}
+                >
+                  %
+                </button>
+              </div>
             </div>
           </div>
           {#if closestToLevel.length === 0}
