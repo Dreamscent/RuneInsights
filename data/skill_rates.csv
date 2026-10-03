@@ -19,9 +19,11 @@ Defence,0,
 Strength,250000,Vyres(Split exp 2 way)
 Hitpoints,465000,POH Elite Profane Scarabites
 Hitpoints,160000,Melee Vyres
+Hitpoints,400000,Magic Sanguine Werewolves
 Ranged,480000,Ranged Vyres
 Prayer,380000,Melee Vyres
 Magic,1400000,POH Elite Profane Scarabites
+Magic,1100000,POH Sanguine Werewolves
 Cooking,0,
 Woodcutting,0,
 Fletching,0,

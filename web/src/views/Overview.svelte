@@ -225,7 +225,7 @@
             </p>
           {:else}
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {#each data.focus.slice(0, 4) as fk (fk)}
+              {#each data.focus.slice(0, 8) as fk (fk)}
                 {@const sk = (data.skills || []).find((x) => x.key === fk)}
                 {@const dayRow = rates.day?.skills.find((x) => x.key === fk)}
                 {@const momentum = dayRow?.hasBaseline && dayRow.gain > 0}

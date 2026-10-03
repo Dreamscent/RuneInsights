@@ -32,14 +32,15 @@
     }
   }
 
-  // pre-expand skills that already have numbers, collapse empty ones
-  $effect(() => {
-    const rowsSnapshot = rows;
-    for (const r of rowsSnapshot) {
-      const has = r.methods.some((m) => m.perHour > 0);
-      expanded[r.key] = has;
-    }
-  });
+  // all skills start collapsed; users expand what they want to edit
+
+  function expandAll() {
+    for (const r of rows) expanded[r.key] = true;
+  }
+
+  function collapseAll() {
+    for (const r of rows) expanded[r.key] = false;
+  }
 
   const filtered = $derived.by(() => {
     const q = query.trim().toLowerCase();
@@ -113,6 +114,8 @@
         </p>
       </div>
       <span class="chip">{usedCount} / {rows.length} skills have rates</span>
+      <button class="btn btn-ghost text-xs" onclick={expandAll}>Expand all</button>
+      <button class="btn btn-ghost text-xs" onclick={collapseAll}>Collapse all</button>
     </div>
   </div>
 
