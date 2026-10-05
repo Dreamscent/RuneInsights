@@ -198,6 +198,44 @@
     return selected?.xpPerHour ?? 0;
   });
 
+  // Fixed targets for the estimate rows: next level (N+1) plus the level
+  // milestones 99 / 110 / 120. Passed milestones are dropped, a next level that
+  // coincides with a milestone is shown once, and at the 200m cap we show none.
+  // Invention (elite) speeds along its own XP curve, so anchors differ.
+  const XP_CAP = 200_000_000;
+  const MILESTONE_XP: Record<'std' | 'elite', Record<number, number>> = {
+    std: { 99: 13_034_431, 110: 38_737_661, 120: 104_273_167 },
+    elite: { 99: 36_073_511, 110: 56_412_678, 120: 80_618_654 },
+  } as const;
+
+  interface EstimateRow {
+    label: string;
+    /** hours of training at the effective rate */
+    hours: number | null;
+  }
+
+  const estimateRows = $derived.by((): EstimateRow[] => {
+    if (!selected) return [];
+    const sl = selected;
+    const rate = calcEffective;
+    if (rate <= 0 || sl.xp >= XP_CAP) return [];
+    const v = sl.virtualLevel;
+    const curve = sl.elite ? MILESTONE_XP.elite : MILESTONE_XP.std;
+    const xp = sl.xp;
+    const milestones = [99, 110, 120].filter((m) => m > v && curve[m] > xp);
+    const nextLevel = v + 1;
+    // next level and first milestone coincide -> single row, no repeat
+    const rows: EstimateRow[] = [];
+    if (milestones[0] !== nextLevel && sl.xpToNext > 0 && (sl.elite || nextLevel <= 126)) {
+      rows.push({ label: `level ${nextLevel}`, hours: (sl.xpToNext - sl.xpIntoLevel) / rate });
+    }
+    for (const m of milestones) {
+      rows.push({ label: `level ${m}`, hours: (curve[m] - xp) / rate });
+    }
+    if (xp < XP_CAP) rows.push({ label: '200m xp', hours: (XP_CAP - xp) / rate });
+    return rows;
+  });
+
   async function saveRate() {
     if (!selected || calcSaving) return;
     const n = Number(String(calcRate ?? '').replace(/[,\s]/g, ''));
@@ -645,18 +683,20 @@
 
         {#if calcEffective > 0}
           <div class="mt-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-panel)] p-2.5 text-[11px]">
-            <div class="tabular flex items-center justify-between">
-              <span class="text-[var(--color-muted)]">Time to level {selected.level + 1}</span>
-              <span class="font-medium text-[var(--color-gold-soft)]">
-                ≈ {duration((selected.xpToNext - selected.xpIntoLevel) / calcEffective)}
-              </span>
-            </div>
-            <div class="tabular mt-1.5 flex items-center justify-between">
-              <span class="text-[var(--color-muted)]">Time to {selected.next.label}</span>
-              <span class="font-medium text-[var(--color-jade)]">
-                ≈ {duration(selected.next.remaining / calcEffective)}
-              </span>
-            </div>
+            {#if selected.xp >= XP_CAP}
+              <p class="text-center text-[var(--color-jade)]">200m reached — nothing left to estimate</p>
+            {:else if estimateRows.length > 0}
+              {#each estimateRows as row, i (row.label)}
+                <div class="tabular {i > 0 ? 'mt-1.5' : ''} flex items-center justify-between">
+                  <span class="text-[var(--color-muted)]">Time to {row.label}</span>
+                  <span class="font-medium {i === 0 ? 'text-[var(--color-gold-soft)]' : 'text-[var(--color-jade)]'}">
+                    ≈ {duration(row.hours)}
+                  </span>
+                </div>
+              {/each}
+            {:else}
+              <p class="text-center text-[var(--color-faint)]">No estimates — enter an XP/hour value above.</p>
+            {/if}
             <p class="mt-2 text-[10px] text-[var(--color-faint)]">
               At {num(calcEffective)} xp/hour
             </p>

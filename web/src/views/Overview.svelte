@@ -247,6 +247,32 @@
                       ></span>
                     </div>
                     <div class="mt-2">
+                      <div class="tabular flex items-center justify-between text-[10px] text-[var(--color-muted)]">
+                        <span>
+                          {#if sk.maxed}
+                            maxed
+                          {:else}
+                            → lvl {sk.level + 1}{sk.nextLevelVirtual ? ' (v' + sk.virtualLevel + ')' : ''} · {compact(sk.xpToNext)} xp left
+                          {/if}
+                        </span>
+                        <span class="font-medium {sk.nextLevelEtaHours ? 'text-[var(--color-gold-soft)]' : 'text-[var(--color-faint)]'}">
+                          {#if sk.maxed}
+                            {sk.next.label}
+                          {:else if sk.nextLevelEtaHours}
+                            ≈ {duration(sk.nextLevelEtaHours)}
+                          {:else}
+                            no rate
+                          {/if}
+                        </span>
+                      </div>
+                      {#if !sk.maxed}
+                        <ProgressBar
+                          pctValue={sk.xpToNext > 0 ? (sk.xpIntoLevel / sk.xpToNext) * 100 : 100}
+                          color="linear-gradient(90deg,#f5a524,var(--color-gold))"
+                          height={5}
+                        />
+                      {/if}
+                      <div class="mt-1.5">
                       <ProgressBar
                         pctValue={sk.next.pct}
                         color="linear-gradient(90deg,#34d399,var(--color-gold))"
@@ -258,14 +284,15 @@
                           {sk.next.etaHours ? '≈ ' + duration(sk.next.etaHours) : 'no estimate'}
                         </span>
                       </div>
+                      </div>
                     </div>
                   </div>
                 {/if}
               {/each}
             </div>
-            {#if data.focus.length > 4}
+            {#if data.focus.length > 8}
               <p class="mt-2 text-center text-[11px] text-[var(--color-faint)]">
-                +{data.focus.length - 4} more pinned — see the Skills page
+                +{data.focus.length - 8} more pinned — see the Skills page
               </p>
             {/if}
           {/if}

@@ -12,7 +12,7 @@
     { id: 1, name: 'Attack' },
     { id: 2, name: 'Defence' },
     { id: 3, name: 'Strength' },
-    { id: 4, name: 'Hitpoints' },
+    { id: 4, name: 'Constitution' },
     { id: 5, name: 'Ranged' },
     { id: 6, name: 'Prayer' },
     { id: 7, name: 'Magic' },

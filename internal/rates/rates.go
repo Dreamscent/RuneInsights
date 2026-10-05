@@ -11,7 +11,7 @@
 //	Hunter,1200000,Chinning with juju on tightrope
 //
 // Blank lines and lines starting with '#' are ignored. Skill names are matched
-// case-insensitively against the hiscore names (e.g. "Hitpoints").
+// case-insensitively against the hiscore names (e.g. "Constitution").
 package rates
 
 import (

@@ -54,7 +54,23 @@ type Player struct {
 }
 
 // Key is the stable storage key for a skill/activity name.
-func Key(name string) string { return strings.ToLower(name) }
+// "hitpoints" is aliased to "constitution" (the skill's current name).
+func Key(name string) string {
+	k := strings.ToLower(name)
+	if k == "hitpoints" {
+		return "constitution"
+	}
+	return k
+}
+
+// DisplayName normalizes upstream skill names that Jagex renamed,
+// e.g. "Hitpoints" → "Constitution".
+func DisplayName(name string) string {
+	if name == "Hitpoints" {
+		return "Constitution"
+	}
+	return name
+}
 
 // Account types and their hiscore module paths.
 var modulePath = map[string]string{
@@ -135,6 +151,7 @@ func (c *Client) FetchPlayer(ctx context.Context, accountType, name string) (*Pl
 		return nil, fmt.Errorf("hiscore: invalid JSON: %w", err)
 	}
 	for i := range p.Skills {
+		p.Skills[i].Name = DisplayName(p.Skills[i].Name)
 		if p.Skills[i].XP < 0 {
 			p.Skills[i].XP = 0 // untouched skills report -1
 		}
@@ -188,7 +205,7 @@ func (c *Client) FetchLeaderboard(ctx context.Context, table, category string) (
 	}
 	rows := make([]LeaderboardRow, 0, len(raw))
 	for _, r := range raw {
-		row := LeaderboardRow{Name: r.Name}
+		row := LeaderboardRow{Name: DisplayName(r.Name)}
 		row.Rank, _ = strconv.Atoi(strings.ReplaceAll(r.Rank, ",", ""))
 		s, _ := strconv.ParseInt(strings.ReplaceAll(r.Score, ",", ""), 10, 64)
 		row.Score = s

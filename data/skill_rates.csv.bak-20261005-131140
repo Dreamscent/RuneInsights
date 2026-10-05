@@ -3,7 +3,7 @@
 # the time estimates for "next level" and the next milestone (99/110/120/200m).
 #
 # Format:  skill,exp_per_hour,training_method
-#   - skill: exact skill name (case-insensitive), e.g. Hunter, Constitution, Necromancy
+#   - skill: exact skill name (case-insensitive), e.g. Hunter, Hitpoints, Necromancy
 #   - exp_per_hour: average XP per hour as a number; commas are stripped, e.g. 350000 or 1,200,000
 #   - training_method: shown in the UI; quote it if it contains a comma
 # Entries not listed (or with exp_per_hour 0) simply show "no estimate".
@@ -19,10 +19,10 @@ Attack,250000,Vyres(Split exp 2 way)
 Defence,0,
 Strength,675000,POH Sanguine Werewolves
 Strength,250000,Vyres(Split exp 2 way)
-Constitution,440000,POH Sanguine Werewolves (Melee)
-Constitution,160000,Melee Vyres
-Constitution,400000,POH Magic Sanguine Werewolves
-Constitution,465000,POH Elite Profane Scarabites
+Hitpoints,440000,POH Sanguine Werewolves (Melee)
+Hitpoints,160000,Melee Vyres
+Hitpoints,400000,POH Magic Sanguine Werewolves
+Hitpoints,465000,POH Elite Profane Scarabites
 Ranged,480000,Ranged Vyres
 Prayer,380000,Melee Vyres
 Magic,1400000,POH Elite Profane Scarabites
