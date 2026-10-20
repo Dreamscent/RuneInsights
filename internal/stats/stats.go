@@ -12,16 +12,17 @@ import (
 type Period string
 
 const (
-	Day   Period = "day"
-	Week  Period = "week"
-	Month Period = "month"
-	Year  Period = "year"
+	Day       Period = "day"
+	Yesterday Period = "yesterday"
+	Week      Period = "week"
+	Month     Period = "month"
+	Year      Period = "year"
 )
 
 // ParsePeriod validates a period string, defaulting to Day.
 func ParsePeriod(s string) (Period, bool) {
 	switch Period(s) {
-	case Day, Week, Month, Year:
+	case Day, Yesterday, Week, Month, Year:
 		return Period(s), true
 	case "":
 		return Day, true
@@ -32,6 +33,8 @@ func ParsePeriod(s string) (Period, bool) {
 
 func (p Period) Duration() time.Duration {
 	switch p {
+	case Yesterday:
+		return 24 * time.Hour
 	case Week:
 		return 7 * 24 * time.Hour
 	case Month:
@@ -76,8 +79,10 @@ type Rates struct {
 	TrackingDays  float64    `json:"trackingDays"`
 }
 
-// ComputeRates compares the latest snapshot against the latest snapshot taken
-// at or before (now - period). The rate uses the real elapsed time between the
+// ComputeRates compares the latest snapshot against a baseline snapshot. For
+// Day and Yesterday the baseline is the last snapshot before local midnight
+// (calendar days); for Week/Month/Year it is the latest snapshot at or before
+// (now - period). The rate uses the real elapsed time between the
 // two snapshots rather than the nominal period length, so a period is never
 // overstated when snapshots are sparse.
 func ComputeRates(d *db.DB, playerID int64, p Period, now time.Time) (*Rates, error) {
@@ -92,6 +97,46 @@ func ComputeRates(d *db.DB, playerID int64, p Period, now time.Time) (*Rates, er
 	}
 	to := latest.FetchedAt
 	out.To = &to
+
+	var base *db.Snapshot
+	// curSnap is the snapshot gains are measured TO. For calendar-day periods
+	// it is NOT the latest snapshot: Yesterday ends at yesterday's last
+	// snapshot, so its rows diff that snapshot against the previous day's.
+	curSnap := latest
+	if p == Day || p == Yesterday {
+		// "Today" and "Yesterday" are calendar days, not trailing windows:
+		// Today = (last snapshot of yesterday, latest];
+		// Yesterday = (last snapshot of 2 days ago, last snapshot of yesterday].
+		dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		endSnap, err2 := d.SnapshotBefore(playerID, dayStart)
+		if err2 != nil {
+			return nil, err2
+		}
+		if p == Yesterday {
+			if endSnap == nil {
+				// nothing captured before today — yesterday is unobserved
+				base = nil
+			} else {
+				curSnap = endSnap
+				to = endSnap.FetchedAt
+				out.To = &to
+				base, err = d.SnapshotBefore(playerID, dayStart.Add(-24*time.Hour))
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			base, err = d.SnapshotBefore(playerID, dayStart)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		base, err = d.SnapshotBefore(playerID, to.Add(-p.Duration()))
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// tracking totals (earliest -> latest)
 	if first, err := d.FirstSnapshot(playerID); err == nil && first != nil && first.ID != latest.ID {
@@ -108,15 +153,10 @@ func ComputeRates(d *db.DB, playerID int64, p Period, now time.Time) (*Rates, er
 		}
 	}
 
-	base, err := d.SnapshotBefore(playerID, to.Add(-p.Duration()))
-	if err != nil {
-		return nil, err
-	}
-
-	// Emit a row for every skill in the latest snapshot so the UI can show a
+	// Emit a row for every skill in the current snapshot so the UI can show a
 	// stable table even before a baseline exists.
-	keys := make([]string, 0, len(latest.Skills))
-	for k := range latest.Skills {
+	keys := make([]string, 0, len(curSnap.Skills))
+	for k := range curSnap.Skills {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -124,7 +164,7 @@ func ComputeRates(d *db.DB, playerID int64, p Period, now time.Time) (*Rates, er
 	if base == nil {
 		first, ferr := d.FirstSnapshot(playerID)
 		for _, k := range keys {
-			s := latest.Skills[k]
+			s := curSnap.Skills[k]
 			g := SkillGain{Key: k, Name: s.Name, HasBaseline: false}
 			if s.Rank >= 0 {
 				rk := s.Rank
@@ -140,7 +180,7 @@ func ComputeRates(d *db.DB, playerID int64, p Period, now time.Time) (*Rates, er
 			}
 			out.Skills = append(out.Skills, g)
 		}
-		ov := latest.Skills["overall"]
+		ov := curSnap.Skills["overall"]
 		out.Overall = SkillGain{Key: "overall", Name: "Overall", HasBaseline: false}
 		_ = ov
 		return out, nil
@@ -167,7 +207,7 @@ func ComputeRates(d *db.DB, playerID int64, p Period, now time.Time) (*Rates, er
 	}
 
 	for _, k := range keys {
-		cur := latest.Skills[k]
+		cur := curSnap.Skills[k]
 		g := SkillGain{Key: k, Name: cur.Name, HasBaseline: false}
 		if cur.Rank >= 0 {
 			rk := cur.Rank
@@ -197,7 +237,7 @@ func ComputeRates(d *db.DB, playerID int64, p Period, now time.Time) (*Rates, er
 	}
 
 	out.Overall = SkillGain{Key: "overall", Name: "Overall", HasBaseline: false}
-	if cur, ok := latest.Skills["overall"]; ok {
+	if cur, ok := curSnap.Skills["overall"]; ok {
 		if cur.Rank >= 0 {
 			rk := cur.Rank
 			out.Overall.Rank = &rk

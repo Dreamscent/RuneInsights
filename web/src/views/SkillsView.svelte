@@ -92,8 +92,30 @@
   let dayRates = $state<Rates | null>(null);
 
   // gains for the selected window (1/7/30 days), per skill
-  const GAIN_WINDOWS = ['day', 'week', 'month', 'year'] as const;
+  const GAIN_WINDOWS = ['day', 'yesterday', 'week', 'month', 'year'] as const;
   type GainWindow = (typeof GAIN_WINDOWS)[number];
+  // display names for the window toggles and short chips
+  const WINDOW_LABEL: Record<GainWindow, string> = {
+    day: 'Today',
+    yesterday: 'Yesterday',
+    week: '7 days',
+    month: '30 days',
+    year: '1 year',
+  };
+  const WINDOW_SHORT: Record<GainWindow, string> = {
+    day: 'today',
+    yesterday: 'yday',
+    week: '1w',
+    month: '30d',
+    year: '1y',
+  };
+  const WINDOW_NOUN: Record<GainWindow, string> = {
+    day: 'day',
+    yesterday: 'day',
+    week: 'week',
+    month: '30 days',
+    year: 'year',
+  };
   let gainWindow = $state<GainWindow>('day');
   let ratesByWindow = $state<Partial<Record<GainWindow, Rates | null>>>({});
   const gainValues = $derived.by(() => {
@@ -280,40 +302,6 @@
 <div class="flex flex-col gap-4">
   {#if data && data.skills.length > 0}
     <div class="flex flex-wrap items-center gap-2">
-      <input
-        class="input max-w-56"
-        placeholder="Filter skills…"
-        bind:value={query}
-        aria-label="Filter skills"
-      />
-      <div class="card inline-flex overflow-hidden p-1" role="group" aria-label="Gain window">
-        {#each GAIN_WINDOWS as w (w)}
-          <button
-            class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
-              {gainWindow === w
-              ? 'bg-[var(--color-panel-2)] text-[var(--color-gold-soft)] shadow-[inset_0_0_0_1px_var(--color-line-2)]'
-              : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}"
-            onclick={() => setGainWindow(w)}
-          >
-            {w === 'day' ? '1 day' : w === 'week' ? '7 days' : w === 'month' ? '30 days' : '1 year'}
-          </button>
-        {/each}
-      </div>
-      <span class="text-xs text-[var(--color-faint)]">
-        {#if data && data.focus.length > 0}
-          <span class="chip text-[var(--color-gold-soft)]">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--color-gold)" stroke="var(--color-gold)" stroke-width="1.2" stroke-linejoin="round">
-              <path d="M9 4h6l1 7 3 3v2h-7v6l-1 1-1-1v-5H5v-2l3-3z" />
-            </svg>
-            {data.focus.length} pinned
-          </span>
-        {/if}
-        Click a skill for its history · hover its icon and hit
-        <svg class="inline -mt-0.5 text-[var(--color-gold)]" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" style="display:inline">
-          <path d="M9 4h6l1 7 3 3v2h-7v6l-1 1-1-1v-5H5v-2l3-3z" />
-        </svg>
-        to pin it to the top as a focused skill
-      </span>
       <div class="card min-w-44 px-3 py-1.5">
         <div class="flex items-center justify-between gap-3">
           <div>
@@ -323,7 +311,7 @@
             </div>
           </div>
           <div class="text-right">
-            <div class="text-[10px] font-medium tracking-wide text-[var(--color-faint)] uppercase">Gain {gainWindow === 'day' ? '1d' : gainWindow === 'week' ? '1w' : gainWindow === 'month' ? '30d' : '1y'}</div>
+            <div class="text-[10px] font-medium tracking-wide text-[var(--color-faint)] uppercase">Gain {WINDOW_SHORT[gainWindow]}</div>
             {#if gainValues.get('overall') === null && (fallbackGain.map.get('overall') ?? 0) > 0}
               <div class="tabular text-lg leading-tight font-semibold text-[var(--color-sky)]">{signedCompact(fallbackGain.map.get('overall'))}</div>
             {:else if gainValues.get('overall') != null}
@@ -347,6 +335,40 @@
           />
         </div>
       </div>
+      <input
+        class="input max-w-56"
+        placeholder="Filter skills…"
+        bind:value={query}
+        aria-label="Filter skills"
+      />
+      <div class="card inline-flex overflow-hidden p-1" role="group" aria-label="Gain window">
+        {#each GAIN_WINDOWS as w (w)}
+          <button
+            class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
+              {gainWindow === w
+              ? 'bg-[var(--color-panel-2)] text-[var(--color-gold-soft)] shadow-[inset_0_0_0_1px_var(--color-line-2)]'
+              : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}"
+            onclick={() => setGainWindow(w)}
+          >
+            {WINDOW_LABEL[w]}
+          </button>
+        {/each}
+      </div>
+      <span class="text-xs text-[var(--color-faint)]">
+        {#if data && data.focus.length > 0}
+          <span class="chip text-[var(--color-gold-soft)]">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--color-gold)" stroke="var(--color-gold)" stroke-width="1.2" stroke-linejoin="round">
+              <path d="M9 4h6l1 7 3 3v2h-7v6l-1 1-1-1v-5H5v-2l3-3z" />
+            </svg>
+            {data.focus.length} pinned
+          </span>
+        {/if}
+        Click a skill for its history · hover its icon and hit
+        <svg class="inline -mt-0.5 text-[var(--color-gold)]" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" style="display:inline">
+          <path d="M9 4h6l1 7 3 3v2h-7v6l-1 1-1-1v-5H5v-2l3-3z" />
+        </svg>
+        to pin it to the top as a focused skill
+      </span>
     </div>
 
     <div class="card overflow-hidden">
@@ -364,7 +386,7 @@
                 Experience {arrowChar('xp')}
               </th>
               <th class="cursor-pointer hidden px-3 py-2.5 text-right font-medium select-none md:table-cell" onclick={() => toggleSort('rate')}>
-                Gain {gainWindow === 'day' ? '1d' : gainWindow === 'week' ? '1w' : gainWindow === 'month' ? '30d' : '1y'} {arrowChar('rate')}
+                Gain {WINDOW_SHORT[gainWindow]} {arrowChar('rate')}
               </th>
               <th class="px-3 py-2.5 font-medium">Next level</th>
               <th class="cursor-pointer px-3 py-2.5 font-medium select-none" onclick={() => toggleSort('remaining')}>
@@ -428,11 +450,11 @@
                 <td class="tabular hidden px-3 py-2.5 text-right md:table-cell">
                   {#if gainValues.get(s.key) === null}
                     {#if fallbackGain.active && fallbackGain.map.get(s.key)}
-                      <span class="text-[var(--color-sky)]" title="No full {gainWindow === 'day' ? '1 day' : gainWindow === 'week' ? '1 week' : gainWindow === 'month' ? '30 days' : '1 year'} of history yet — showing total XP gained since tracking began">
+                      <span class="text-[var(--color-sky)]" title="No full {WINDOW_NOUN[gainWindow]} of history yet — showing total XP gained since tracking began">
                         {signedCompact(fallbackGain.map.get(s.key)!)}
                       </span>
                     {:else}
-                      <span class="text-[var(--color-faint)]" title="Need a baseline snapshot ≥ {gainWindow === 'day' ? '1 day' : gainWindow === 'week' ? '1 week' : gainWindow === 'month' ? '30 days' : '1 year'} old">—</span>
+                      <span class="text-[var(--color-faint)]" title="Need a baseline snapshot ≥ {WINDOW_NOUN[gainWindow]} old">—</span>
                     {/if}
                   {:else}
                     <div class="leading-tight">
@@ -487,7 +509,7 @@
     </div>
 
     <p class="text-center text-[11px] text-[var(--color-faint)]">
-      Snapshot as of {timeAgo(data.snapshotAt)} · the gain column shows XP recorded in the selected {gainWindow === 'day' ? 'day' : gainWindow === 'week' ? 'week' : gainWindow === 'month' ? '30 days' : 'year'}
+      Snapshot as of {timeAgo(data.snapshotAt)} · the gain column shows XP recorded in the selected {WINDOW_NOUN[gainWindow]}
       {#if fallbackGain.active && !ratesByWindow[gainWindow]?.hasBaseline}
         · overall gain is the total since tracking began ({Math.max(1, Math.floor(fallbackGain.days))} {Math.floor(fallbackGain.days) <= 1 ? 'day' : 'days'} of data)
       {/if}

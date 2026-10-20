@@ -12,6 +12,8 @@
 
   const PERIODS = ['day', 'week', 'month', 'year'] as const;
   type P = (typeof PERIODS)[number];
+  // "day" is the calendar day (since local midnight), shown as "Today"
+  const P_LABEL: Record<P, string> = { day: 'Today', week: 'Week', month: 'Month', year: 'Year' };
 
   let rates = $state<Record<P, Rates | null>>({ day: null, week: null, month: null, year: null });
   let ratesLoading = $state(true);
@@ -193,7 +195,7 @@
           {@const r = rates[p]}
           <div class="rounded-xl border border-[var(--color-line)] bg-[var(--color-bg-soft)] p-3">
             <div class="text-[10px] font-semibold tracking-widest text-[var(--color-faint)] uppercase">
-              {p}
+              {P_LABEL[p]}
             </div>
             <div
               class="tabular mt-1 text-lg font-semibold {r?.hasBaseline

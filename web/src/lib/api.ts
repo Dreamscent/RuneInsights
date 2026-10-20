@@ -163,7 +163,7 @@ export interface ClanResponse {
   members: ClanMember[];
 }
 
-export type Period = 'day' | 'week' | 'month' | 'year';
+export type Period = 'day' | 'yesterday' | 'week' | 'month' | 'year';
 export type AccountType = 'normal' | 'ironman' | 'hardcore';
 
 export interface RateEntry {

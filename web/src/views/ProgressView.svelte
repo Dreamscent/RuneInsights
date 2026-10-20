@@ -153,7 +153,7 @@
               : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'}"
             onclick={() => (period = p)}
           >
-            {p}
+            {p === 'day' ? 'Today' : p}
           </button>
         {/each}
       </div>

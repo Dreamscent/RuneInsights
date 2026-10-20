@@ -14,19 +14,19 @@
 #   Smithing,9500000,"Anachronia base camp, hallendarman fur"
 #
 skill,exp_per_hour,training_method
-Attack,675000,POH Sanguine Werewolves
+Attack,700000,POH Sanguine Werewolves
 Attack,250000,Vyres(Split exp 2 way)
 Defence,0,
-Strength,675000,POH Sanguine Werewolves
+Strength,700000,POH Sanguine Werewolves
 Strength,250000,Vyres(Split exp 2 way)
-Constitution,440000,POH Sanguine Werewolves (Melee)
+Constitution,460000,POH Sanguine Werewolves (Melee)
 Constitution,160000,Melee Vyres
 Constitution,400000,POH Magic Sanguine Werewolves
 Constitution,465000,POH Elite Profane Scarabites
 Ranged,480000,Ranged Vyres
 Prayer,380000,Melee Vyres
-Magic,1400000,POH Elite Profane Scarabites
 Magic,1100000,POH Sanguine Werewolves
+Magic,1400000,POH Elite Profane Scarabites
 Cooking,0,
 Woodcutting,0,
 Fletching,0,

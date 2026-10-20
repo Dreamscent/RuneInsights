@@ -47,15 +47,13 @@ export function pct(n: number | null | undefined, digits = 1): string {
   return `${decimal(n, digits)}%`;
 }
 
-/** Hours -> human duration like "3d 4h", "5h 12m", "38m", "just now". */
+/** Hours -> human duration in hours+minutes, e.g. "5h 12m", "58h", "38m". */
 export function duration(hours: number | null | undefined): string {
   if (hours === null || hours === undefined || !Number.isFinite(hours) || hours <= 0) return '—';
   const totalMin = Math.round(hours * 60);
   if (totalMin < 1) return 'less than a minute';
-  const d = Math.floor(totalMin / 1440);
-  const h = Math.floor((totalMin % 1440) / 60);
+  const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
-  if (d > 0) return `${d}d ${h}h`;
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 }
